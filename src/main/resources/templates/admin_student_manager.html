@@ -12,9 +12,12 @@
             <div class="sidebar-header"><span class="sidebar-brand">EAC REGISTRAR</span></div>
             <ul class="list-unstyled components">
                 <li><a href="/"><i class="fas fa-home sidebar-icon"></i> Dashboard</a></li>
+                <li><a href="/admin/enrollment"><i class="fas fa-clipboard-list sidebar-icon"></i> Enrollment Hub</a></li>
+                <li><a href="/admin/payments"><i class="fas fa-money-check-alt sidebar-icon"></i> Payment Approvals</a></li>
                 <li class="active"><a href="/admin/student-manager"><i class="fas fa-user-graduate sidebar-icon"></i> Student Manager</a></li>
-                <li><a href="/admin/approvals"><i class="fas fa-check-circle sidebar-icon"></i> Approvals</a></li>
+                <li><a href="/admin/approvals"><i class="fas fa-check-circle sidebar-icon"></i> Grade Approvals</a></li>
                 <li><a href="/admin/admission-acceptance"><i class="fas fa-file-import sidebar-icon"></i> Admission</a></li>
+                <li><a href="/admin/classes"><i class="fas fa-chalkboard sidebar-icon"></i> Class Management</a></li>
                 <li><a href="/logout"><i class="fas fa-sign-out-alt sidebar-icon"></i> Logout</a></li>
             </ul>
         </nav>
@@ -26,22 +29,16 @@
 
             <div class="container-fluid p-4">
                 <div class="row g-4">
+                    
                     <div class="col-md-3">
                         <div class="card card-modern p-3">
                             <h6 class="text-muted fw-bold small mb-3">REGISTRATION</h6>
                             
                             <button class="btn btn-light w-100 text-start mb-2" th:if="${student != null}" data-bs-toggle="modal" data-bs-target="#addSubjectModal">
-                                <i class="fas fa-plus-circle me-2"></i> Add Subject
+                                <i class="fas fa-plus-circle me-2 text-primary"></i> Add Subject
                             </button>
                             <button class="btn btn-light w-100 text-start mb-2" disabled th:if="${student == null}">
                                 <i class="fas fa-plus-circle me-2"></i> Add Subject
-                            </button>
-
-                            <button class="btn btn-light w-100 text-start mb-4" th:if="${student != null}" data-bs-toggle="modal" data-bs-target="#historyModal">
-                                <i class="fas fa-history me-2"></i> View History
-                            </button>
-                            <button class="btn btn-light w-100 text-start mb-4" disabled th:if="${student == null}">
-                                <i class="fas fa-history me-2"></i> View History
                             </button>
 
                             <h6 class="text-muted fw-bold small mb-3 border-top pt-3">DOCUMENTS</h6>
@@ -70,6 +67,7 @@
                     </div>
 
                     <div class="col-md-9">
+                        
                         <div class="card card-modern p-4 mb-4" style="overflow: visible;">
                             <div class="row align-items-center">
                                 <div class="col-md-5 border-end position-relative">
@@ -116,8 +114,8 @@
                             </div>
                         </div>
 
-                        <div class="card card-modern" th:if="${student != null}">
-                            <div class="card-header bg-white fw-bold">CURRENT ENROLLMENT</div>
+                        <div class="card card-modern mb-4 border-start border-5 border-primary" th:if="${student != null}">
+                            <div class="card-header bg-white fw-bold"><i class="fas fa-book-open text-primary me-2"></i> CURRENT ENROLLMENT</div>
                             <div class="table-responsive">
                                 <table class="table align-middle mb-0">
                                     <thead class="table-light"><tr><th>Code</th><th>Description</th><th>Schedule</th><th>Units</th><th>Action</th></tr></thead>
@@ -140,6 +138,55 @@
                                 </table>
                             </div>
                         </div>
+
+                        <div class="card card-modern border-start border-5 border-warning" th:if="${student != null}">
+                            <div class="card-header bg-white fw-bold"><i class="fas fa-history text-warning me-2"></i> COMPLETE ACADEMIC HISTORY</div>
+                           <div class="card-body">
+                                <div th:each="year : ${academicHistory}" class="mb-4">
+                                    <h6 class="border-bottom pb-2 fw-bold text-primary" th:text="'Academic Year: ' + ${year.key}"></h6>
+                                    <div class="table-responsive">
+                                        <table class="table table-sm align-middle">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th width="10%">Code</th>
+                                                    <th width="30%">Description</th>
+                                                    <th width="12%">Prelim</th>
+                                                    <th width="12%">Midterm</th>
+                                                    <th width="12%">Finals</th>
+                                                    <th width="12%">Sem Grade</th>
+                                                    <th width="12%">Remarks</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr th:each="sub : ${year.value}">
+                                                    <td class="fw-bold text-primary" th:text="${sub.course_code}"></td>
+                                                    <td class="small" th:text="${sub.description}"></td>
+                                                    <td>
+                                                        <span th:text="${sub.prelim_score}"></span>
+                                                        <span class="badge bg-secondary ms-1" th:if="${sub.prelim_point != ''}" th:text="${sub.prelim_point}"></span>
+                                                    </td>
+                                                    <td>
+                                                        <span th:text="${sub.midterm_score}"></span>
+                                                        <span class="badge bg-secondary ms-1" th:if="${sub.midterm_point != ''}" th:text="${sub.midterm_point}"></span>
+                                                    </td>
+                                                    <td>
+                                                        <span th:text="${sub.finals_score}"></span>
+                                                        <span class="badge bg-secondary ms-1" th:if="${sub.final_point != ''}" th:text="${sub.final_point}"></span>
+                                                    </td>
+                                                    <td class="fw-bold" th:text="${sub.semestral_score}"></td>
+                                                    <td>
+                                                        <span th:class="${sub.remarks == 'Failed' ? 'badge bg-danger' : (sub.remarks == 'Passed' ? 'badge bg-success' : 'badge bg-warning text-dark')}" th:text="${sub.remarks}"></span>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                                <div th:if="${#maps.isEmpty(academicHistory)}" class="text-center text-muted py-3">No previous academic records found.</div>
+                            </div>
+                            </div>
+                        </div>
+
                     </div>
                 </div>
             </div>
@@ -180,37 +227,6 @@
                             </tbody>
                         </table>
                     </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="modal fade" id="historyModal" tabindex="-1" th:if="${student != null}">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header bg-warning text-dark">
-                    <h5 class="modal-title">Academic History</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div th:each="year : ${academicHistory}" class="mb-4">
-                        <h6 class="border-bottom pb-2 fw-bold text-primary" th:text="'Academic Year: ' + ${year.key}"></h6>
-                        <table class="table table-sm">
-                            <thead><tr><th>Code</th><th>Description</th><th>Grade</th><th>Remarks</th></tr></thead>
-                            <tbody>
-                                <tr th:each="sub : ${year.value}">
-                                    <td class="fw-bold" th:text="${sub.course_code}"></td>
-                                    <td th:text="${sub.description}"></td>
-                                    <td class="fw-bold" th:text="${sub.semestral_grade}"></td>
-                                    <td>
-                                        <span th:class="${sub.remarks == 'Failed' ? 'badge bg-danger' : 'badge bg-success'}" 
-                                              th:text="${sub.remarks}"></span>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                    <div th:if="${#maps.isEmpty(academicHistory)}" class="text-center text-muted py-3">No previous academic records found.</div>
                 </div>
             </div>
         </div>

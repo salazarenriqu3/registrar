@@ -195,11 +195,33 @@ public class RegistrarController {
     // ADMIN ADMISSION & STUDENT MANAGER
     // ==========================================
     @GetMapping("/admin/admission-acceptance")
-    public String admissionAcceptance(HttpSession session, Model model) {
+    public String admissionAcceptance(@RequestParam(required=false) String searchQuery, HttpSession session, Model model) {
         if (session.getAttribute("currentUser") == null) return "redirect:/login";
-        model.addAttribute("applicants", service.getPendingApplications());
+        
+        if (searchQuery != null && !searchQuery.trim().isEmpty()) {
+            // Updated service call to find a single applicant by name or ID
+            Map<String, Object> applicant = service.findPendingApplicant(searchQuery);
+            if (applicant != null) {
+                model.addAttribute("applicant", applicant);
+                
+                // Logic to preview the student ID assignment
+                String yearPrefix = String.valueOf(java.time.Year.now().getValue());
+                int count = service.getTotalStudentCount(); 
+                String nextIdPreview = String.format("%s-%04d", yearPrefix, (count + 1));
+                model.addAttribute("nextIdPreview", nextIdPreview);
+            }
+            model.addAttribute("searchQuery", searchQuery);
+        }
+        
         return "admin_admission_acceptance";
     }
+    
+    @GetMapping("/api/search-applicants")
+    @ResponseBody
+    public List<Map<String, Object>> searchApplicantsApi(@RequestParam String query) {
+        return service.searchApplicantsByName(query);
+    }
+    
 
     @PostMapping("/admin/process-admission")
     public String processAdmission(@RequestParam String applicantId, @RequestParam String finalProgram, @RequestParam String yearLevel, @RequestParam String curriculum, @RequestParam String email, @RequestParam String phone, @RequestParam String address, @RequestParam String birthdate, @RequestParam String sex) {

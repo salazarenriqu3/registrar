@@ -303,16 +303,6 @@ public class RegistrarService {
         return classes;
     }
 
-    public Map<Integer, List<Map<String, Object>>> getStudentAcademicHistory(int sid) {
-        String sql = "SELECT s.course_code, s.description, g.semestral_grade, g.remarks, s.curriculum_year FROM student_grades g JOIN class_schedules cs ON g.schedule_id = cs.schedule_id JOIN curriculum_catalog s ON cs.course_code = s.course_code WHERE g.student_id = ? AND g.status = 'SUBMITTED' ORDER BY s.curriculum_year DESC";
-        List<Map<String, Object>> raw = db.queryForList(sql, sid);
-        Map<Integer, List<Map<String, Object>>> h = new LinkedHashMap<>();
-        
-        for (Map<String, Object> r : raw) {
-            h.computeIfAbsent((int) r.get("curriculum_year"), k -> new ArrayList<>()).add(r);
-        }
-        return h;
-    }
 
     public String checkScheduleConflict(int studentId, int newScheduleId) {
         Map<String, Object> newClass = db.queryForMap("SELECT day, start_time, end_time, course_code FROM class_schedules WHERE schedule_id = ?", newScheduleId);
@@ -398,10 +388,15 @@ public class RegistrarService {
         double pointGrade = 0.0;
         String remarks = "";
 
+        // NEW LOGIC: If finals aren't graded yet, the class is still "Ongoing"
         if (p == 0 && m == 0 && f == 0) {
             pointGrade = 0.0;
             remarks = "Ongoing";
-        } else if (p == 0 || m == 0 || f == 0) {
+        } else if (f == 0) {
+            pointGrade = 0.0;
+            remarks = "Ongoing";
+        } else if (p == 0 || m == 0) {
+            // Finals are in, but they missed prelim or midterm
             pointGrade = 0.0;
             remarks = "INC";
         } else {
@@ -428,6 +423,33 @@ public class RegistrarService {
         result.put("semestral_grade", remarks.equals("INC") ? "INC" : String.format("%.2f", pointGrade));
         result.put("remarks", remarks);
         return result;
+    }
+
+    public Map<Integer, List<Map<String, Object>>> getStudentAcademicHistory(int sid) {
+        String sql = "SELECT s.course_code, s.description, g.prelim, g.midterm, g.final, g.semestral_grade, g.remarks, s.curriculum_year FROM student_grades g JOIN class_schedules cs ON g.schedule_id = cs.schedule_id JOIN curriculum_catalog s ON cs.course_code = s.course_code WHERE g.student_id = ? AND g.status = 'SUBMITTED' ORDER BY s.curriculum_year DESC";
+        List<Map<String, Object>> raw = db.queryForList(sql, sid);
+        Map<Integer, List<Map<String, Object>>> h = new LinkedHashMap<>();
+        
+        for (Map<String, Object> r : raw) {
+            double p = r.get("prelim") != null ? ((Number)r.get("prelim")).doubleValue() : 0.0;
+            double m = r.get("midterm") != null ? ((Number)r.get("midterm")).doubleValue() : 0.0;
+            double f = r.get("final") != null ? ((Number)r.get("final")).doubleValue() : 0.0;
+            double sg = r.get("semestral_grade") != null ? ((Number)r.get("semestral_grade")).doubleValue() : 0.0;
+            
+            // FIX: Bypass SpEL keyword crash by formatting directly in Java
+            r.put("prelim_score", p > 0 ? String.valueOf(p) : "-");
+            r.put("midterm_score", m > 0 ? String.valueOf(m) : "-");
+            r.put("finals_score", f > 0 ? String.valueOf(f) : "-"); // Safely named to avoid the 'final' keyword
+            r.put("semestral_score", sg > 0 ? String.valueOf(sg) : "-");
+
+            // Generate the point equivalents safely
+            r.put("prelim_point", p > 0 ? String.format("%.2f", convertToPointGrade(p)) : "");
+            r.put("midterm_point", m > 0 ? String.format("%.2f", convertToPointGrade(m)) : "");
+            r.put("final_point", f > 0 ? String.format("%.2f", convertToPointGrade(f)) : "");
+
+            h.computeIfAbsent((int) r.get("curriculum_year"), k -> new ArrayList<>()).add(r);
+        }
+        return h;
     }
     
     @Transactional
@@ -579,5 +601,23 @@ public class RegistrarService {
             r.put("pretty_schedule", r.get("day") + " " + formatTime(r.get("start_time")) + "-" + formatTime(r.get("end_time")));
         }
         return l;
+    }
+    public Map<String, Object> findPendingApplicant(String q) {
+        try {
+            // Updated to allow partial and case-insensitive matching for both ID and Name
+            String sql = "SELECT * FROM admission_applications WHERE status = 'PENDING' AND (LOWER(applicant_id) LIKE LOWER(?) OR LOWER(full_name) LIKE LOWER(?)) LIMIT 1";
+            return db.queryForMap(sql, "%" + q + "%", "%" + q + "%");
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    public int getTotalStudentCount() {
+        return db.queryForObject("SELECT COUNT(*) FROM sys_users WHERE role LIKE 'Student'", Integer.class);
+    }
+    
+    public List<Map<String, Object>> searchApplicantsByName(String q) {
+        String sql = "SELECT applicant_id, full_name FROM admission_applications WHERE status = 'PENDING' AND LOWER(full_name) LIKE LOWER(?) LIMIT 10";
+        return db.queryForList(sql, "%" + q + "%");
     }
 }
