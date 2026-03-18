@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Student Finance</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/css/modern-style.css">
+</head>
+<body class="bg-light">
+    <div class="wrapper">
+        <nav id="sidebar">
+            <div class="sidebar-header"><span class="sidebar-brand">EAC PORTAL</span></div>
+            <ul class="list-unstyled components">
+                <li><a href="/enrollment"><i class="fas fa-book-open sidebar-icon"></i> Enrollment</a></li>
+                <li><a href="/my-grades"><i class="fas fa-star sidebar-icon"></i> My Grades</a></li>
+                <li class="active"><a href="/student/finance"><i class="fas fa-wallet sidebar-icon"></i> Finance & Payment</a></li>
+                <li><a href="/my-load"><i class="fas fa-file-invoice sidebar-icon"></i> My COR</a></li>
+                <li><a href="/logout"><i class="fas fa-sign-out-alt sidebar-icon"></i> Logout</a></li>
+            </ul>
+        </nav>
+        
+        <div id="content">
+            <nav class="top-navbar">
+                <span class="fw-bold fs-5">Financial Accounts</span>
+            </nav>
+            <div class="container-fluid p-4">
+                
+                <div th:if="${successMsg}" class="alert alert-success fw-bold"><i class="fas fa-check-circle me-2"></i> <span th:text="${successMsg}"></span></div>
+                <div th:if="${errorMsg}" class="alert alert-danger fw-bold"><i class="fas fa-exclamation-circle me-2"></i> <span th:text="${errorMsg}"></span></div>
+
+                <div class="row g-4">
+                    <div class="col-md-5">
+                        <div class="card card-modern p-4 mb-4 border-start border-5 border-danger">
+                            <h5 class="text-muted fw-bold mb-3">OUTSTANDING BALANCE</h5>
+                            <h2 class="text-danger fw-bold mb-0">₱ <span th:text="${finance.balance_fmt}"></span></h2>
+                            <hr>
+                            <div class="d-flex justify-content-between small text-secondary">
+                                <span>Total Assessment:</span>
+                                <strong>₱ <span th:text="${finance.total_assessment_fmt}"></span></strong>
+                            </div>
+                            <div class="d-flex justify-content-between small text-secondary mt-1">
+                                <span>Verified Payments:</span>
+                                <strong class="text-success">- ₱ <span th:text="${finance.total_paid_fmt}"></span></strong>
+                            </div>
+                        </div>
+
+                        <div class="card card-modern p-4 border-start border-5 border-success">
+                            <h5 class="fw-bold mb-3"><i class="fas fa-upload me-2 text-success"></i> Submit Payment Proof</h5>
+                            <form action="/student/submit-payment" method="post" enctype="multipart/form-data">
+                                <div class="mb-3">
+                                    <label class="small fw-bold">Amount Paid (₱)</label>
+                                    <input type="number" step="0.01" name="amount" class="form-control" required placeholder="e.g., 5000.00">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="small fw-bold">Reference Number</label>
+                                    <input type="text" name="referenceNumber" class="form-control" required placeholder="GCash / Bank Ref No.">
+                                </div>
+                                <div class="mb-4">
+                                    <label class="small fw-bold">Upload Screenshot/Receipt</label>
+                                    <input type="file" name="receiptFile" class="form-control" accept="image/*" required>
+                                </div>
+                                <button class="btn btn-success w-100 fw-bold"><i class="fas fa-paper-plane me-2"></i> Submit for Verification</button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <div class="col-md-7">
+                        <div class="card card-modern p-4 h-100">
+                            <h5 class="fw-bold mb-3"><i class="fas fa-history me-2"></i> Payment History</h5>
+                            <div class="table-responsive">
+                                <table class="table align-middle">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Ref #</th>
+                                            <th>Amount</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr th:each="p : ${payments}">
+                                            <td class="small" th:text="${#dates.format(p.payment_date, 'MMM dd, yyyy')}"></td>
+                                            <td class="fw-bold" th:text="${p.reference_number}"></td>
+                                            <td class="fw-bold" th:text="${'₱ ' + #numbers.formatDecimal(p.amount, 1, 'COMMA', 2, 'POINT')}"></td>
+                                            <td>
+                                                <span th:class="${'badge ' + (p.status == 'PENDING' ? 'bg-warning text-dark' : (p.status == 'VERIFIED' ? 'bg-success' : 'bg-danger'))}" th:text="${p.status}"></span>
+                                            </td>
+                                        </tr>
+                                        <tr th:if="${#lists.isEmpty(payments)}">
+                                            <td colspan="4" class="text-center text-muted py-4">No payment records found.</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

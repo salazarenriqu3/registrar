@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Student Manager</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/css/modern-style.css">
+</head>
+<body class="bg-light">
+    <div class="wrapper">
+        <nav id="sidebar">
+            <div class="sidebar-header"><span class="sidebar-brand">EAC REGISTRAR</span></div>
+            <ul class="list-unstyled components">
+                <li><a href="/"><i class="fas fa-home sidebar-icon"></i> Dashboard</a></li>
+                <li class="active"><a href="/admin/student-manager"><i class="fas fa-user-graduate sidebar-icon"></i> Student Manager</a></li>
+                <li><a href="/admin/approvals"><i class="fas fa-check-circle sidebar-icon"></i> Approvals</a></li>
+                <li><a href="/admin/admission-acceptance"><i class="fas fa-file-import sidebar-icon"></i> Admission</a></li>
+                <li><a href="/logout"><i class="fas fa-sign-out-alt sidebar-icon"></i> Logout</a></li>
+            </ul>
+        </nav>
+
+        <div id="content">
+            <nav class="top-navbar">
+                <span class="fw-bold fs-5">Student Manager</span>
+            </nav>
+
+            <div class="container-fluid p-4">
+                <div class="row g-4">
+                    <div class="col-md-3">
+                        <div class="card card-modern p-3">
+                            <h6 class="text-muted fw-bold small mb-3">REGISTRATION</h6>
+                            
+                            <button class="btn btn-light w-100 text-start mb-2" th:if="${student != null}" data-bs-toggle="modal" data-bs-target="#addSubjectModal">
+                                <i class="fas fa-plus-circle me-2"></i> Add Subject
+                            </button>
+                            <button class="btn btn-light w-100 text-start mb-2" disabled th:if="${student == null}">
+                                <i class="fas fa-plus-circle me-2"></i> Add Subject
+                            </button>
+
+                            <button class="btn btn-light w-100 text-start mb-4" th:if="${student != null}" data-bs-toggle="modal" data-bs-target="#historyModal">
+                                <i class="fas fa-history me-2"></i> View History
+                            </button>
+                            <button class="btn btn-light w-100 text-start mb-4" disabled th:if="${student == null}">
+                                <i class="fas fa-history me-2"></i> View History
+                            </button>
+
+                            <h6 class="text-muted fw-bold small mb-3 border-top pt-3">DOCUMENTS</h6>
+                            
+                            <a th:if="${student != null}" th:href="@{/admin/print-cor(username=${student.username})}" target="_blank" class="btn btn-primary w-100 text-start mb-2">
+                                <i class="fas fa-file-invoice-dollar me-2"></i> Print COR
+                            </a>
+                            <button th:if="${student == null}" class="btn btn-light w-100 text-start mb-2" disabled>
+                                <i class="fas fa-file-invoice-dollar me-2"></i> Print COR
+                            </button>
+                            
+                            <a th:if="${student != null}" th:href="@{/admin/print-cog(username=${student.username})}" target="_blank" class="btn btn-info text-white w-100 text-start mb-2">
+                                <i class="fas fa-file-alt me-2"></i> Print COG
+                            </a>
+                            <button th:if="${student == null}" class="btn btn-light w-100 text-start mb-2" disabled>
+                                <i class="fas fa-file-alt me-2"></i> Print COG
+                            </button>
+
+                            <a th:if="${student != null}" th:href="@{/admin/print-tor(username=${student.username})}" target="_blank" class="btn btn-dark w-100 text-start">
+                                <i class="fas fa-graduation-cap me-2"></i> Print TOR
+                            </a>
+                            <button th:if="${student == null}" class="btn btn-light w-100 text-start" disabled>
+                                <i class="fas fa-graduation-cap me-2"></i> Print TOR
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="col-md-9">
+                        <div class="card card-modern p-4 mb-4" style="overflow: visible;">
+                            <div class="row align-items-center">
+                                <div class="col-md-5 border-end position-relative">
+                                    <label class="small fw-bold text-muted mb-2">FIND STUDENT</label>
+                                    <div class="search-wrapper position-relative">
+                                        <input type="text" id="nameSearch" class="form-control mb-2" placeholder="Search Name..." onkeyup="fetchSuggestions()" autocomplete="off">
+                                        <div id="suggestions" class="suggestions-box"></div>
+                                    </div>
+                                    <form action="/admin/student-manager" method="get" class="d-flex gap-2 mt-2" style="position: relative; z-index: 0;">
+                                        <input type="text" id="idSearchBox" name="username" class="form-control fw-bold" placeholder="Enter ID..." th:value="${student?.username}">
+                                        <button class="btn btn-danger"><i class="fas fa-search"></i></button>
+                                    </form>
+                                    <div class="alert alert-danger small py-2 mt-2 mb-0" th:if="${message}" th:text="${message}"></div>
+                                </div>
+
+                                <div class="col-md-7 ps-4" th:if="${student != null}">
+                                    <div class="d-flex justify-content-between">
+                                        <div>
+                                            <h2 class="fw-bold mb-0" th:text="${student.real_name}"></h2>
+                                            <span class="badge bg-secondary" th:text="${student.username}"></span>
+                                            <span class="badge bg-success" th:if="${student.is_active}">ACTIVE</span>
+                                        </div>
+                                        <div class="text-end">
+                                            <small class="text-muted d-block">TUITION FEE</small>
+                                            <h3 class="fw-bold text-danger mb-0" th:text="${'₱ ' + finance.tuition_fee_fmt}"></h3>
+                                        </div>
+                                    </div>
+                                    <hr>
+                                    <div class="row small text-secondary">
+                                        <div class="col-4"><strong>Program:</strong> <span th:text="${student.program_code}"></span></div>
+                                        <div class="col-4"><strong>Year:</strong> <span th:text="${student.year_level}"></span></div>
+                                        <div class="col-4"><strong>Section:</strong> <span class="text-muted">N/A</span></div>
+                                        <div class="col-12 mt-2">
+                                            <i class="fas fa-envelope me-1"></i> <span th:text="${student.email}"></span> &bull; 
+                                            <i class="fas fa-phone me-1"></i> <span th:text="${student.contact_number}"></span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-7 text-center text-muted" th:if="${student == null}">
+                                    <i class="fas fa-user-graduate fa-3x mb-2 opacity-50"></i>
+                                    <p>Search for a student to view details.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card card-modern" th:if="${student != null}">
+                            <div class="card-header bg-white fw-bold">CURRENT ENROLLMENT</div>
+                            <div class="table-responsive">
+                                <table class="table align-middle mb-0">
+                                    <thead class="table-light"><tr><th>Code</th><th>Description</th><th>Schedule</th><th>Units</th><th>Action</th></tr></thead>
+                                    <tbody>
+                                        <tr th:each="load : ${studentLoad}">
+                                            <td class="fw-bold" th:text="${load.course_code}"></td>
+                                            <td th:text="${load.description}"></td>
+                                            <td class="small text-muted" th:text="${load.pretty_schedule}"></td>
+                                            <td th:text="${load.units}"></td>
+                                            <td>
+                                                <form action="/admin/drop" method="post" onsubmit="return confirm('Drop subject?');">
+                                                    <input type="hidden" name="studentId" th:value="${student.user_id}">
+                                                    <input type="hidden" name="scheduleId" th:value="${load.schedule_id}">
+                                                    <button class="btn btn-sm text-danger"><i class="fas fa-times-circle"></i></button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                        <tr th:if="${#lists.isEmpty(studentLoad)}"><td colspan="5" class="text-center py-4 text-muted">No subjects enrolled.</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="addSubjectModal" tabindex="-1" th:if="${student != null}">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">Add Subject</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3 position-relative">
+                        <i class="fas fa-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted"></i>
+                        <input type="text" id="subjectSearch" onkeyup="searchSubjects()" class="form-control ps-5" placeholder="Search subject code or description...">
+                    </div>
+                    <div style="max-height: 400px; overflow-y: auto;">
+                        <table class="table table-hover align-middle" id="subjectTable">
+                            <thead class="table-light sticky-top"><tr><th>Subject</th><th>Schedule</th><th>Action</th></tr></thead>
+                            <tbody>
+                                <tr th:each="c : ${analyzedClasses}">
+                                    <td>
+                                        <strong th:text="${c.course_code}"></strong> <span class="badge bg-secondary" th:text="${c.section}"></span><br>
+                                        <small th:text="${c.description}"></small>
+                                    </td>
+                                    <td class="small" th:text="${c.pretty_schedule}"></td>
+                                    <td>
+                                        <form action="/admin/enroll" method="post" th:if="${!c.is_disabled}">
+                                            <input type="hidden" name="studentId" th:value="${student.user_id}">
+                                            <input type="hidden" name="scheduleId" th:value="${c.schedule_id}">
+                                            <button class="btn btn-sm btn-success fw-bold">ADD</button>
+                                        </form>
+                                        <span th:if="${c.is_disabled}" class="badge bg-secondary">Enrolled</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="historyModal" tabindex="-1" th:if="${student != null}">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title">Academic History</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div th:each="year : ${academicHistory}" class="mb-4">
+                        <h6 class="border-bottom pb-2 fw-bold text-primary" th:text="'Academic Year: ' + ${year.key}"></h6>
+                        <table class="table table-sm">
+                            <thead><tr><th>Code</th><th>Description</th><th>Grade</th><th>Remarks</th></tr></thead>
+                            <tbody>
+                                <tr th:each="sub : ${year.value}">
+                                    <td class="fw-bold" th:text="${sub.course_code}"></td>
+                                    <td th:text="${sub.description}"></td>
+                                    <td class="fw-bold" th:text="${sub.semestral_grade}"></td>
+                                    <td>
+                                        <span th:class="${sub.remarks == 'Failed' ? 'badge bg-danger' : 'badge bg-success'}" 
+                                              th:text="${sub.remarks}"></span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div th:if="${#maps.isEmpty(academicHistory)}" class="text-center text-muted py-3">No previous academic records found.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let debounceTimer;
+        function fetchSuggestions() {
+            const query = document.getElementById("nameSearch").value;
+            const box = document.getElementById("suggestions");
+            if (query.length < 2) { box.style.display = "none"; return; }
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                fetch(`/api/search-students?query=${query}`).then(r => r.json()).then(data => {
+                    box.innerHTML = "";
+                    if (data.length > 0) {
+                        box.style.display = "block";
+                        data.forEach(s => {
+                            let div = document.createElement("div");
+                            div.className = "suggestion-item"; 
+                            div.style.cursor = "pointer";
+                            div.innerHTML = `<span class="student-name">${s.real_name}</span> <span class="badge bg-light text-dark border student-id">${s.username}</span>`;
+                            div.onclick = () => {
+                                document.getElementById("nameSearch").value = s.real_name; 
+                                document.getElementById("idSearchBox").value = s.username; 
+                                box.style.display = "none"; 
+                                document.querySelector("#idSearchBox + button").click(); 
+                            };
+                            box.appendChild(div);
+                        });
+                    } else { box.style.display = "none"; }
+                });
+            }, 300);
+        }
+
+        function searchSubjects() {
+            var input = document.getElementById("subjectSearch"); 
+            var filter = input.value.toUpperCase();
+            var table = document.getElementById("subjectTable"); 
+            var tr = table.getElementsByTagName("tr");
+            for (var i = 1; i < tr.length; i++) {
+                var td = tr[i].getElementsByTagName("td")[0]; 
+                if (td) {
+                    var txtValue = td.textContent || td.innerText;
+                    if (txtValue.toUpperCase().indexOf(filter) > -1) { 
+                        tr[i].style.display = ""; 
+                    } else { 
+                        tr[i].style.display = "none"; 
+                    }
+                }
+            }
+        }
+    </script>
+</body>
+</html>

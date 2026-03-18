@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>System Settings</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/css/modern-style.css">
+</head>
+<body class="bg-light">
+    <div class="wrapper">
+        <nav id="sidebar">
+            <div class="sidebar-header"><span class="sidebar-brand">EAC REGISTRAR</span></div>
+            <ul class="list-unstyled components">
+                <li><a href="/"><i class="fas fa-home sidebar-icon"></i> Dashboard</a></li>
+                <li><a href="/admin/student-manager"><i class="fas fa-user-graduate sidebar-icon"></i> Student Manager</a></li>
+                <li><a href="/admin/approvals"><i class="fas fa-check-circle sidebar-icon"></i> Approvals</a></li>
+                <li><a href="/admin/admission-acceptance"><i class="fas fa-file-import sidebar-icon"></i> Admission</a></li>
+                <li><a href="/admin/classes"><i class="fas fa-chalkboard sidebar-icon"></i> Class Management</a></li>
+                <li><a href="/admin/users"><i class="fas fa-users-cog sidebar-icon"></i> Users & Access</a></li>
+                <li class="active"><a href="/admin/settings"><i class="fas fa-cogs sidebar-icon"></i> System Settings</a></li>
+                <li><a href="/logout"><i class="fas fa-sign-out-alt sidebar-icon"></i> Logout</a></li>
+            </ul>
+        </nav>
+
+        <div id="content">
+            <nav class="top-navbar">
+                <span class="fw-bold fs-5">Global System Settings</span>
+            </nav>
+
+            <div class="container-fluid p-4">
+                <div class="card card-modern p-4" style="max-width: 800px; margin: auto;">
+                    <h5 class="fw-bold text-secondary mb-4"><i class="fas fa-calendar-alt me-2"></i> Grading Encoding Windows</h5>
+                    
+                    <div th:if="${param.success}" class="alert alert-success"><i class="fas fa-check-circle"></i> Settings saved successfully.</div>
+
+                    <form action="/admin/save-settings" method="post">
+                        <div class="row mb-3 align-items-center bg-light p-3 rounded">
+                            <div class="col-md-3 fw-bold">PRELIMS</div>
+                            <div class="col-md-4">
+                                <label class="small text-muted">Start Date</label>
+                                <input type="date" name="PRELIM_START" class="form-control" th:value="${settings.PRELIM_START}" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="small text-muted">End Date</label>
+                                <input type="date" name="PRELIM_END" class="form-control" th:value="${settings.PRELIM_END}" required>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3 align-items-center bg-light p-3 rounded">
+                            <div class="col-md-3 fw-bold">MIDTERMS</div>
+                            <div class="col-md-4">
+                                <label class="small text-muted">Start Date</label>
+                                <input type="date" name="MIDTERM_START" class="form-control" th:value="${settings.MIDTERM_START}" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="small text-muted">End Date</label>
+                                <input type="date" name="MIDTERM_END" class="form-control" th:value="${settings.MIDTERM_END}" required>
+                            </div>
+                        </div>
+
+                        <div class="row mb-4 align-items-center bg-light p-3 rounded">
+                            <div class="col-md-3 fw-bold">FINALS</div>
+                            <div class="col-md-4">
+                                <label class="small text-muted">Start Date</label>
+                                <input type="date" name="FINAL_START" class="form-control" th:value="${settings.FINAL_START}" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="small text-muted">End Date</label>
+                                <input type="date" name="FINAL_END" class="form-control" th:value="${settings.FINAL_END}" required>
+                            </div>
+                        </div>
+
+                        <div class="text-end">
+                            <button class="btn btn-primary fw-bold px-4 shadow-sm"><i class="fas fa-save me-2"></i> Save Changes</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

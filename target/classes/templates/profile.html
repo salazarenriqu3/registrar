@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head><link rel="stylesheet" href="/css/eac-theme.css"></head>
+<body class="container mt-5" style="max-width: 500px;">
+    <div class="card">
+        <div class="card-header">Change Password</div>
+        <div class="card-body">
+            <form action="/change-password" method="post">
+                <label>New Password</label>
+                <input type="password" name="newPassword" class="form-control mb-3" required>
+                <button class="btn btn-warning w-100">Update & Logout</button>
+            </form>
+        </div>
+    </div>
+</body>
+</html>

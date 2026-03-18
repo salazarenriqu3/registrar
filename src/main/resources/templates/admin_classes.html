@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Manage Classes</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/css/modern-style.css">
+</head>
+<body class="bg-light">
+    <div class="wrapper">
+        <nav id="sidebar">
+            <div class="sidebar-header"><span class="sidebar-brand">EAC REGISTRAR</span></div>
+            <ul class="list-unstyled components">
+                <li><a href="/"><i class="fas fa-home sidebar-icon"></i> Dashboard</a></li>
+                <li><a href="/admin/student-manager"><i class="fas fa-user-graduate sidebar-icon"></i> Student Manager</a></li>
+                <li><a href="/admin/approvals"><i class="fas fa-check-circle sidebar-icon"></i> Approvals</a></li>
+                <li><a href="/admin/admission-acceptance"><i class="fas fa-file-import sidebar-icon"></i> Admission</a></li>
+                <li class="active"><a href="/admin/classes"><i class="fas fa-chalkboard sidebar-icon"></i> Class Management</a></li>
+                <li><a href="/admin/users"><i class="fas fa-users-cog sidebar-icon"></i> Users & Access</a></li>
+                <li><a href="/admin/settings"><i class="fas fa-cogs sidebar-icon"></i> System Settings</a></li>
+                <li><a href="/logout"><i class="fas fa-sign-out-alt sidebar-icon"></i> Logout</a></li>
+            </ul>
+        </nav>
+
+        <div id="content">
+            <nav class="top-navbar">
+                <span class="fw-bold fs-5">All Class Offerings</span>
+            </nav>
+
+            <div class="container-fluid p-4">
+                <div class="card card-modern">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Course</th>
+                                    <th>Description</th>
+                                    <th>Instructor</th>
+                                    <th>Schedule</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="c : ${classes}">
+                                    <td class="fw-bold" th:text="${c.course_code + ' - ' + c.section}"></td>
+                                    <td th:text="${c.description}"></td>
+                                    <td th:text="${c.faculty_name != null ? c.faculty_name : 'TBA'}"></td>
+                                    <td class="small text-muted" th:text="${c.pretty_schedule}"></td>
+                                    <td>
+                                        <span th:class="${'badge ' + (c.status == 'OPEN' ? 'bg-success' : (c.status == 'PENDING_APPROVAL' ? 'bg-warning text-dark' : 'bg-primary'))}" 
+                                              th:text="${c.status == 'OPEN' ? 'OPEN / DRAFT' : c.status}"></span>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex gap-2">
+                                            <a th:href="@{/admin/classes/view/{id}(id=${c.schedule_id})}" class="btn btn-sm btn-light border">View</a>
+                                            
+                                            <form th:if="${c.status == 'OPEN'}" action="/admin/toggle-unlock" method="post" class="d-inline">
+                                                <input type="hidden" name="scheduleId" th:value="${c.schedule_id}">
+                                                <input type="hidden" name="unlockStatus" th:value="${c.is_unlocked == 1 ? 0 : 1}">
+                                                <button class="btn btn-sm fw-bold shadow-sm" th:classappend="${c.is_unlocked == 1 ? 'btn-secondary' : 'btn-warning'}" th:title="${c.is_unlocked == 1 ? 'Remove Override' : 'Override Date Limits'}">
+                                                    <i class="fas" th:classappend="${c.is_unlocked == 1 ? 'fa-lock' : 'fa-unlock-alt'}"></i>
+                                                </button>
+                                            </form>
+
+                                            <form th:if="${c.status == 'SUBMITTED'}" action="/admin/revert-class" method="post" onsubmit="return confirm('WARNING: This will UN-FINALIZE the class and return it to DRAFT mode for the professor. Continue?');">
+                                                <input type="hidden" name="scheduleId" th:value="${c.schedule_id}">
+                                                <button class="btn btn-sm btn-danger fw-bold" title="Re-open for Editing">
+                                                    <i class="fas fa-undo-alt"></i> Revert
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html> 

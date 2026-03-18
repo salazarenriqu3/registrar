@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>User Management</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/css/modern-style.css">
+</head>
+<body class="bg-light">
+    <div class="wrapper">
+        <nav id="sidebar">
+            <div class="sidebar-header"><span class="sidebar-brand">EAC REGISTRAR</span></div>
+            <ul class="list-unstyled components">
+                <li><a href="/"><i class="fas fa-home sidebar-icon"></i> Dashboard</a></li>
+                <li><a href="/admin/student-manager"><i class="fas fa-user-graduate sidebar-icon"></i> Student Manager</a></li>
+                <li><a href="/admin/approvals"><i class="fas fa-check-circle sidebar-icon"></i> Approvals</a></li>
+                <li><a href="/admin/admission-acceptance"><i class="fas fa-file-import sidebar-icon"></i> Admission</a></li>
+                <li class="active"><a href="/admin/users"><i class="fas fa-users-cog sidebar-icon"></i> Users & Access</a></li>
+                <li><a href="/logout"><i class="fas fa-sign-out-alt sidebar-icon"></i> Logout</a></li>
+            </ul>
+        </nav>
+
+        <div id="content">
+            <nav class="top-navbar">
+                <span class="fw-bold fs-5">User Management</span>
+            </nav>
+
+            <div class="container-fluid p-4">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h5 class="fw-bold text-secondary m-0">System Users</h5>
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addUserModal">
+                        <i class="fas fa-plus-circle me-2"></i> Create New User
+                    </button>
+                </div>
+
+                <div class="card card-modern">
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>ID / Username</th>
+                                        <th>Real Name</th>
+                                        <th>Role</th>
+                                        <th>Status</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr th:each="u : ${users}">
+                                        <td class="fw-bold" th:text="${u.username}"></td>
+                                        <td th:text="${u.real_name}"></td>
+                                        <td>
+                                            <span th:class="${'badge ' + (u.role == 'Admin' ? 'bg-danger' : (u.role == 'Faculty' ? 'bg-warning text-dark' : 'bg-info'))}" 
+                                                  th:text="${u.role}">
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span th:if="${u.is_active}" class="badge bg-success">Active</span>
+                                            <span th:unless="${u.is_active}" class="badge bg-secondary">Inactive</span>
+                                        </td>
+                                        <td>
+                                            <div class="dropdown">
+                                                <button class="btn btn-sm btn-light border" data-bs-toggle="dropdown"><i class="fas fa-ellipsis-v"></i></button>
+                                                <ul class="dropdown-menu">
+                                                    <li>
+                                                        <button class="dropdown-item" 
+                                                                data-bs-toggle="modal" 
+                                                                th:attr="data-bs-target='#editUserModal-'+${u.user_id}">
+                                                            <i class="fas fa-edit me-2 text-primary"></i> Edit Role
+                                                        </button>
+                                                    </li>
+                                                    <li>
+                                                        <form action="/admin/reset-password" method="post" onsubmit="return confirm('Reset password to 1234?');">
+                                                            <input type="hidden" name="userId" th:value="${u.user_id}">
+                                                            <button class="dropdown-item"><i class="fas fa-key me-2 text-warning"></i> Reset Password</button>
+                                                        </form>
+                                                    </li>
+                                                    <li><hr class="dropdown-divider"></li>
+                                                    <li>
+                                                        <form action="/admin/delete-user" method="post" onsubmit="return confirm('Permanently delete this user?');">
+                                                            <input type="hidden" name="userId" th:value="${u.user_id}">
+                                                            <button class="dropdown-item text-danger"><i class="fas fa-trash-alt me-2"></i> Delete</button>
+                                                        </form>
+                                                    </li>
+                                                </ul>
+                                            </div>
+
+                                            <div class="modal fade" th:id="'editUserModal-'+${u.user_id}" tabindex="-1">
+                                                <div class="modal-dialog">
+                                                    <div class="modal-content">
+                                                        <form action="/admin/update-user" method="post">
+                                                            <div class="modal-header">
+                                                                <h5 class="modal-title">Edit User</h5>
+                                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                            </div>
+                                                            <div class="modal-body">
+                                                                <input type="hidden" name="userId" th:value="${u.user_id}">
+                                                                <p>Editing: <strong th:text="${u.real_name}"></strong></p>
+                                                                <div class="mb-3">
+                                                                    <label class="form-label small fw-bold">ROLE</label>
+                                                                    <select name="role" class="form-select">
+                                                                        <option value="Admin" th:selected="${u.role == 'Admin'}">Admin</option>
+                                                                        <option value="Faculty" th:selected="${u.role == 'Faculty'}">Faculty</option>
+                                                                        <option value="Staff" th:selected="${u.role == 'Staff'}">Staff</option>
+                                                                    </select>
+                                                                </div>
+                                                            </div>
+                                                            <div class="modal-footer">
+                                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                                                <button type="submit" class="btn btn-success">Save Changes</button>
+                                                            </div>
+                                                        </form>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="addUserModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form action="/create-user" method="post">
+                    <div class="modal-header bg-primary text-white">
+                        <h5 class="modal-title">Create New User</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">FULL NAME</label>
+                            <input type="text" name="realName" class="form-control" required placeholder="e.g. Juan Dela Cruz">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">USERNAME</label>
+                            <input type="text" name="username" class="form-control" required placeholder="e.g. jdelacruz">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">ROLE</label>
+                            <select name="role" class="form-select" id="roleSelect" onchange="toggleProgram()">
+                                <option value="Faculty">Faculty</option>
+                                <option value="Admin">Admin</option>
+                                <option value="Staff">Staff</option>
+                            </select>
+                        </div>
+                        <div class="mb-3" id="programDiv" style="display:none;">
+                            <label class="form-label small fw-bold">PROGRAM (Faculty Only)</label>
+                            <select name="program" class="form-select">
+                                <option value="">-- None --</option>
+                                <option value="BSIT">BSIT</option>
+                                <option value="BSCE">BSCE</option>
+                                <option value="BSN">BSN</option>
+                            </select>
+                        </div>
+                        <div class="alert alert-info py-2 small">
+                            Default password will be set to: <strong>1234</strong>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Create User</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Only show Program selection if Faculty is selected
+        function toggleProgram() {
+            var role = document.getElementById("roleSelect").value;
+            var div = document.getElementById("programDiv");
+            div.style.display = (role === "Faculty") ? "block" : "none";
+        }
+    </script>
+</body>
+</html>

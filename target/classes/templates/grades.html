@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head><title>Grades</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"><link rel="stylesheet" href="/css/modern-style.css"></head>
+<body>
+    <div class="wrapper">
+        <nav id="sidebar">
+            <div class="sidebar-header"><span class="sidebar-brand">EAC REGISTRAR</span></div>
+            <ul class="list-unstyled components">
+                <li><a href="/"><i class="fas fa-home sidebar-icon"></i> Dashboard</a></li>
+                <li class="active"><a href="/grades"><i class="fas fa-marker sidebar-icon"></i> Grade Sheet</a></li>
+                <li><a href="/logout"><i class="fas fa-sign-out-alt sidebar-icon"></i> Logout</a></li>
+            </ul>
+        </nav>
+        <div id="content">
+            <nav class="top-navbar"><button id="sidebarCollapse" class="btn-toggle"><i class="fas fa-bars"></i></button><span class="fw-bold fs-5">Grade Management</span></nav>
+            <div class="container-fluid p-4">
+                <div class="card card-modern p-4">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light"><tr><th>Student</th><th>Grade</th><th>Status</th><th>Admin</th></tr></thead>
+                        <tbody><tr th:each="g:${grades}">
+                            <td th:text="${g.student_name}"></td>
+                            <td>
+                                <form th:if="${g.status=='DRAFT'}" action="/faculty/save-grade" method="post" class="d-flex">
+                                    <input type="hidden" name="gradeId" th:value="${g.grade_id}"><input type="number" step="0.25" name="grade" th:value="${g.semestral_grade}" class="form-control form-control-sm me-2" style="width:80px">
+                                    <button class="btn btn-sm btn-success"><i class="fas fa-save"></i></button>
+                                </form>
+                                <span th:if="${g.status!='DRAFT'}" th:text="${g.semestral_grade}" class="fw-bold"></span>
+                            </td>
+                            <td><span class="badge bg-secondary" th:text="${g.status}"></span></td>
+                            <td><button th:if="${g.status!='DRAFT'}" class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" th:attr="data-bs-target='#m'+${g.grade_id}">Rectify</button>
+                                <div class="modal fade" th:id="'m'+${g.grade_id}"><div class="modal-dialog"><form action="/rectify" method="post" class="modal-content"><div class="modal-body"><input type="hidden" name="gradeId" th:value="${g.grade_id}"><input type="text" name="newGrade" placeholder="New Grade" class="form-control mb-2"><input type="text" name="reason" placeholder="Reason" class="form-control"></div><div class="modal-footer"><button class="btn btn-danger">Confirm</button></div></form></div></div>
+                            </td>
+                        </tr></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script><script src="/js/main.js"></script>
+</body></html>

@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>My Grades</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/css/modern-style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-light">
+    <div class="wrapper">
+        <nav id="sidebar">
+            <div class="sidebar-header"><span class="sidebar-brand">EAC PORTAL</span></div>
+            <ul class="list-unstyled components">
+                <li><a href="/enrollment"><i class="fas fa-book-open sidebar-icon"></i> My Schedule</a></li>
+                <li class="active"><a href="/my-grades"><i class="fas fa-star sidebar-icon"></i> My Grades</a></li>
+                <li><a href="/student/finance"><i class="fas fa-wallet sidebar-icon"></i> Finance & Payment</a></li>
+                <li><a href="/my-load"><i class="fas fa-file-invoice sidebar-icon"></i> My COR</a></li>
+                <li><a href="/logout"><i class="fas fa-sign-out-alt sidebar-icon"></i> Logout</a></li>
+            </ul>
+        </nav>
+        
+        <div id="content">
+            <nav class="top-navbar">
+                <span class="fw-bold fs-5">My Academic History</span>
+            </nav>
+            <div class="container-fluid p-4">
+                <div class="card card-modern p-4">
+                    <div th:each="year : ${academicHistory}" class="mb-4">
+                        <h6 class="border-bottom pb-2 fw-bold text-success"><i class="fas fa-folder-open me-2"></i> Academic Year: <span th:text="${year.key}"></span></h6>
+                        <div class="table-responsive">
+                            <table class="table table-sm align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Subject Code</th>
+                                        <th>Description</th>
+                                        <th class="text-center">Final Grade</th>
+                                        <th class="text-center">Remarks</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr th:each="sub : ${year.value}">
+                                        <td class="fw-bold text-primary" th:text="${sub.course_code}"></td>
+                                        <td th:text="${sub.description}"></td>
+                                        <td class="text-center fw-bold fs-6" th:text="${sub.semestral_grade}"></td>
+                                        <td class="text-center">
+                                            <span th:class="${sub.remarks == 'Failed' ? 'badge bg-danger' : (sub.remarks == 'INC' ? 'badge bg-warning text-dark' : 'badge bg-success')}" 
+                                                  th:text="${sub.remarks}"></span>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div th:if="${#maps.isEmpty(academicHistory)}" class="text-center py-5 text-muted">
+                        <i class="fas fa-history fa-3x mb-3 opacity-25"></i><br>
+                        No official grades posted yet.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

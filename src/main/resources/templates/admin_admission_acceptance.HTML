@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Admission Acceptance</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/css/modern-style.css">
+</head>
+<body class="bg-light">
+    <div class="wrapper">
+         <nav id="sidebar">
+            <div class="sidebar-header"><span class="sidebar-brand">EAC REGISTRAR</span></div>
+            <ul class="list-unstyled components">
+                <li><a href="/"><i class="fas fa-home sidebar-icon"></i> Dashboard</a></li>
+                <li><a href="/admin/student-manager"><i class="fas fa-user-graduate sidebar-icon"></i> Student Manager</a></li>
+                <li><a href="/admin/approvals"><i class="fas fa-check-circle sidebar-icon"></i> Approvals</a></li>
+                <li class="active"><a href="/admin/admission-acceptance"><i class="fas fa-file-import sidebar-icon"></i> Admission</a></li>
+                <li><a href="/logout"><i class="fas fa-sign-out-alt sidebar-icon"></i> Logout</a></li>
+            </ul>
+        </nav>
+
+        <div id="content">
+            <nav class="top-navbar">
+                <span class="fw-bold fs-5">Admission Acceptance</span>
+            </nav>
+
+            <div class="container-fluid p-4">
+                <div class="alert alert-success" th:if="${param.success}">
+                    <i class="fas fa-check-circle me-2"></i> Student Number Assigned!
+                </div>
+
+                <div class="card card-modern p-4">
+                    <h5 class="fw-bold mb-3">Pending Applicants</h5>
+                    <div class="table-responsive">
+                        <table class="table align-middle table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>App ID</th>
+                                    <th>Full Name</th>
+                                    <th>Applied Program</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="a : ${applicants}">
+                                    <td class="fw-bold" th:text="${a.applicant_id}"></td>
+                                    <td th:text="${a.full_name}"></td>
+                                    <td><span class="badge bg-secondary" th:text="${a.initial_program_code}"></span></td>
+                                    <td>
+                                        <button class="btn btn-primary btn-sm" 
+                                                data-bs-toggle="modal" 
+                                                th:attr="data-bs-target='#modal-'+${a.applicant_id}">
+                                            Review & Assign ID
+                                        </button>
+                                    </td>
+                                </tr>
+                                <tr th:if="${#lists.isEmpty(applicants)}"><td colspan="4" class="text-center py-4">No pending applications.</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div th:each="a : ${applicants}">
+        <div class="modal fade" th:id="'modal-'+${a.applicant_id}" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <form action="/admin/process-admission" method="post">
+                        <div class="modal-header bg-primary text-white">
+                            <h5 class="modal-title">Student Profile Completion</h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <h6 class="text-primary fw-bold border-bottom pb-2">Academic Info</h6>
+                            <input type="hidden" name="applicantId" th:value="${a.applicant_id}">
+                            <div class="row g-2 mb-3">
+                                <div class="col-4">
+                                    <label class="small fw-bold">PROGRAM</label>
+                                    <select name="finalProgram" class="form-select">
+                                        <option value="BSIT" th:selected="${a.initial_program_code == '01'}">BSIT (01)</option>
+                                        <option value="BSCE" th:selected="${a.initial_program_code == '02'}">BSCE (02)</option>
+                                        <option value="BSN" th:selected="${a.initial_program_code == '03'}">BSN (03)</option>
+                                    </select>
+                                </div>
+                                <div class="col-4">
+                                    <label class="small fw-bold">YEAR</label>
+                                    <select name="yearLevel" class="form-select"><option value="1">1st Year</option><option value="2">2nd Year</option></select>
+                                </div>
+                                <div class="col-4">
+                                    <label class="small fw-bold">CURRICULUM</label>
+                                    <input type="text" name="curriculum" class="form-control" value="2025-2026">
+                                </div>
+                            </div>
+
+                            <h6 class="text-primary fw-bold border-bottom pb-2">Personal Info</h6>
+                            <div class="row g-2">
+                                <div class="col-6"><label class="small fw-bold">EMAIL</label><input type="email" name="email" class="form-control" th:value="${a.email}" required></div>
+                                <div class="col-6"><label class="small fw-bold">PHONE</label><input type="text" name="phone" class="form-control" th:value="${a.contact_number}" required></div>
+                                <div class="col-12"><label class="small fw-bold">ADDRESS</label><input type="text" name="address" class="form-control" th:value="${a.address}" required></div>
+                                <div class="col-6"><label class="small fw-bold">BIRTH DATE</label><input type="date" name="birthdate" class="form-control" th:value="${a.birth_date}" required></div>
+                                <div class="col-6"><label class="small fw-bold">SEX</label><select name="sex" class="form-select"><option value="Male" th:selected="${a.sex == 'Male'}">Male</option><option value="Female" th:selected="${a.sex == 'Female'}">Female</option></select></div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                            <button type="submit" class="btn btn-success">Assign ID & Enroll</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

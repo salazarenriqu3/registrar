@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Grade Encoding</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/css/modern-style.css">
+</head>
+<body class="bg-light">
+
+    <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1100;">
+        <div id="saveToast" class="toast align-items-center text-white bg-success border-0" role="alert">
+            <div class="d-flex">
+                <div class="toast-body"><i class="fas fa-check-circle me-2"></i> Auto-saved successfully.</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="wrapper">
+        <nav id="sidebar">
+            <div class="sidebar-header"><span class="sidebar-brand">FACULTY</span></div>
+            <ul class="list-unstyled components">
+                <li><a href="/grades"><i class="fas fa-keyboard sidebar-icon"></i> Grade Encoding</a></li>
+                <li><a href="/logout"><i class="fas fa-sign-out-alt sidebar-icon"></i> Logout</a></li>
+            </ul>
+        </nav>
+
+        <div id="content">
+            <nav class="top-navbar">
+                <span class="fw-bold fs-5">Grade Encoding System</span>
+            </nav>
+
+            <div class="container-fluid p-4">
+                
+                <div class="alert alert-primary mb-4 shadow-sm border-0">
+                    <h6 class="fw-bold text-primary mb-3"><i class="fas fa-calendar-alt me-2"></i> AUTHORIZED ENCODING SCHEDULE</h6>
+                    <div class="row text-center small">
+                        <div class="col-md-4 border-end">
+                            <strong class="d-block mb-1">PRELIMS</strong>
+                            <span th:text="${windows.PRELIM_START + ' to ' + windows.PRELIM_END}"></span><br>
+                            <span th:if="${windows.prelim_open}" class="badge bg-success mt-1">OPEN</span>
+                            <span th:unless="${windows.prelim_open}" class="badge bg-danger mt-1">CLOSED</span>
+                        </div>
+                        <div class="col-md-4 border-end">
+                            <strong class="d-block mb-1">MIDTERMS</strong>
+                            <span th:text="${windows.MIDTERM_START + ' to ' + windows.MIDTERM_END}"></span><br>
+                            <span th:if="${windows.midterm_open}" class="badge bg-success mt-1">OPEN</span>
+                            <span th:unless="${windows.midterm_open}" class="badge bg-danger mt-1">CLOSED</span>
+                        </div>
+                        <div class="col-md-4">
+                            <strong class="d-block mb-1">FINALS</strong>
+                            <span th:text="${windows.FINAL_START + ' to ' + windows.FINAL_END}"></span><br>
+                            <span th:if="${windows.final_open}" class="badge bg-success mt-1">OPEN</span>
+                            <span th:unless="${windows.final_open}" class="badge bg-danger mt-1">CLOSED</span>
+                        </div>
+                    </div>
+                    
+                    <div th:if="${classInfo.is_unlocked == 1}" class="alert alert-warning mt-3 mb-0 py-2 border-warning text-center">
+                        <i class="fas fa-unlock-alt me-2"></i> <strong>ADMIN OVERRIDE ACTIVE:</strong> All deadline restrictions bypassed for this class.
+                    </div>
+                </div>
+
+                <div class="card card-modern p-4 mb-4 border-start border-5"
+                     th:classappend="${classInfo.status == 'OPEN' ? 'border-warning' : (classInfo.status == 'SUBMITTED' ? 'border-success' : 'border-info')}">
+                    
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h2 class="fw-bold mb-0" th:text="${classInfo.course_code}"></h2>
+                            <p class="text-muted mb-0" th:text="${'Section ' + classInfo.section + ' | ' + classInfo.pretty_schedule}"></p>
+                        </div>
+                        <div class="text-end">
+                            <span th:if="${classInfo.status == 'OPEN'}" class="badge bg-warning text-dark fs-6 mb-2">MODE: DRAFT (Auto-Saving)</span>
+                            <span th:if="${classInfo.status == 'PENDING_APPROVAL'}" class="badge bg-info text-dark fs-6 mb-2">MODE: LOCKED (Pending Approval)</span>
+                            <span th:if="${classInfo.status == 'SUBMITTED'}" class="badge bg-success fs-6 mb-2">MODE: OFFICIAL (Finalized)</span>
+                            
+                            <form th:if="${classInfo.status == 'OPEN' && !readonly}" action="/faculty/submit-class" method="post" onsubmit="return confirm('Submit grades? This will LOCK the sheet.');">
+                                <input type="hidden" name="scheduleId" th:value="${classInfo.schedule_id}">
+                                <button class="btn btn-success fw-bold shadow"><i class="fas fa-paper-plane me-2"></i> Submit Final Grades</button>
+                            </form>
+
+                            <form th:if="${classInfo.status == 'PENDING_APPROVAL' && !readonly}" action="/faculty/unsubmit-class" method="post">
+                                <input type="hidden" name="scheduleId" th:value="${classInfo.schedule_id}">
+                                <button class="btn btn-warning fw-bold shadow"><i class="fas fa-undo me-2"></i> Unlock / Unsubmit</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <ul class="nav nav-tabs mb-3" id="gradeTabs" role="tablist" th:if="${classInfo.has_lab == 1}">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active fw-bold" id="lec-tab" data-bs-toggle="tab" data-bs-target="#lec-pane" type="button" role="tab">Lecture Grades</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link fw-bold text-primary" id="lab-tab" data-bs-toggle="tab" data-bs-target="#lab-pane" type="button" role="tab"><i class="fas fa-flask me-1"></i> Laboratory Grades</button>
+                    </li>
+                </ul>
+
+                <div class="tab-content" id="gradeTabsContent">
+                    
+                    <div class="tab-pane fade show active" id="lec-pane" role="tabpanel">
+                        <div class="card card-modern border-top-0 rounded-top-0">
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th style="width: 25%;">Student Name</th>
+                                            <th class="text-center" style="width: 15%;">Prelim</th>
+                                            <th class="text-center" style="width: 15%;">Midterm</th>
+                                            <th class="text-center" style="width: 15%;">Final</th>
+                                            <th class="text-center" style="width: 15%;">Grade</th>
+                                            <th class="text-center" style="width: 15%;">Remarks</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr th:each="g : ${grades}" th:data-gradeid="${g.grade_id}" data-gradetype="LEC">
+                                            <td>
+                                                <strong th:text="${g.student_name}"></strong>
+                                                <div th:if="${g.status == 'SUBMITTED' && !readonly}" class="mt-1">
+                                                    <button type="button" class="btn btn-xs btn-outline-danger" data-bs-toggle="modal" th:attr="data-bs-target='#req'+${g.grade_id}" style="font-size: 0.7rem; padding: 2px 5px;">Request Edit</button>
+                                                </div>
+                                            </td>
+                                            
+                                            <th:block th:if="${g.status == 'DRAFT'}">
+                                                <td><input type="number" step="0.01" class="form-control form-control-sm text-center fw-bold auto-save-input prelim" th:value="${g.prelim}" 
+                                                           th:disabled="${readonly || (!windows.prelim_open && classInfo.is_unlocked == 0)}"></td>
+                                                <td><input type="number" step="0.01" class="form-control form-control-sm text-center fw-bold auto-save-input midterm" th:value="${g.midterm}" 
+                                                           th:disabled="${readonly || (!windows.midterm_open && classInfo.is_unlocked == 0)}"></td>
+                                                <td><input type="number" step="0.01" class="form-control form-control-sm text-center fw-bold auto-save-input final" th:value="${g.final}" 
+                                                           th:disabled="${readonly || (!windows.final_open && classInfo.is_unlocked == 0)}"></td>
+                                                
+                                                <td class="text-center"><span class="fw-bold text-primary display-grade" th:text="${g.remarks == 'INC' ? 'INC' : g.semestral_grade}"></span></td>
+                                                <td class="text-center"><span class="badge display-remarks" th:classappend="${(g.remarks == 'Passed' ? 'bg-success' : (g.remarks == 'Failed' ? 'bg-danger' : (g.remarks == 'INC' ? 'bg-warning text-dark' : 'bg-secondary')))}" th:text="${g.remarks}"></span></td>
+                                            </th:block>
+
+                                            <th:block th:if="${g.status != 'DRAFT'}">
+                                                <td class="text-center" th:text="${g.prelim}"></td>
+                                                <td class="text-center" th:text="${g.midterm}"></td>
+                                                <td class="text-center" th:text="${g.final}"></td>
+                                                <td class="text-center"><span class="badge bg-light text-dark border fs-6" th:text="${g.remarks == 'INC' ? 'INC' : g.semestral_grade}"></span></td>
+                                                <td class="text-center"><span th:class="${'badge ' + (g.remarks == 'Passed' ? 'bg-success' : (g.remarks == 'Failed' ? 'bg-danger' : (g.remarks == 'INC' ? 'bg-warning text-dark' : 'bg-secondary')))}" th:text="${g.remarks}"></span></td>
+                                            </th:block>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="tab-pane fade" id="lab-pane" role="tabpanel" th:if="${classInfo.has_lab == 1}">
+                        <div class="card card-modern border-top-0 rounded-top-0 border-primary">
+                            <div class="table-responsive">
+                                <table class="table table-hover align-middle mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th style="width: 25%;">Student Name</th>
+                                            <th class="text-center" style="width: 15%;">Lab Prelim</th>
+                                            <th class="text-center" style="width: 15%;">Lab Midterm</th>
+                                            <th class="text-center" style="width: 15%;">Lab Final</th>
+                                            <th class="text-center" style="width: 15%;">Lab Grade</th>
+                                            <th class="text-center" style="width: 15%;">Remarks</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr th:each="g : ${grades}" th:data-gradeid="${g.grade_id}" data-gradetype="LAB">
+                                            <td><strong th:text="${g.student_name}"></strong></td>
+                                            
+                                            <th:block th:if="${g.status == 'DRAFT'}">
+                                                <td><input type="number" step="0.01" class="form-control form-control-sm text-center fw-bold text-primary auto-save-input prelim" th:value="${g.lab_prelim}" 
+                                                           th:disabled="${readonly || (!windows.prelim_open && classInfo.is_unlocked == 0)}"></td>
+                                                <td><input type="number" step="0.01" class="form-control form-control-sm text-center fw-bold text-primary auto-save-input midterm" th:value="${g.lab_midterm}" 
+                                                           th:disabled="${readonly || (!windows.midterm_open && classInfo.is_unlocked == 0)}"></td>
+                                                <td><input type="number" step="0.01" class="form-control form-control-sm text-center fw-bold text-primary auto-save-input final" th:value="${g.lab_final}" 
+                                                           th:disabled="${readonly || (!windows.final_open && classInfo.is_unlocked == 0)}"></td>
+                                                <td class="text-center"><span class="fw-bold text-primary display-grade" th:text="${g.lab_remarks == 'INC' ? 'INC' : g.lab_semestral_grade}"></span></td>
+                                                <td class="text-center"><span class="badge display-remarks" th:classappend="${(g.lab_remarks == 'Passed' ? 'bg-success' : (g.lab_remarks == 'Failed' ? 'bg-danger' : (g.lab_remarks == 'INC' ? 'bg-warning text-dark' : 'bg-secondary')))}" th:text="${g.lab_remarks}"></span></td>
+                                            </th:block>
+
+                                            <th:block th:if="${g.status != 'DRAFT'}">
+                                                <td class="text-center text-primary fw-bold" th:text="${g.lab_prelim}"></td>
+                                                <td class="text-center text-primary fw-bold" th:text="${g.lab_midterm}"></td>
+                                                <td class="text-center text-primary fw-bold" th:text="${g.lab_final}"></td>
+                                                <td class="text-center"><span class="badge bg-light text-dark border fs-6" th:text="${g.lab_remarks == 'INC' ? 'INC' : g.lab_semestral_grade}"></span></td>
+                                                <td class="text-center"><span th:class="${'badge ' + (g.lab_remarks == 'Passed' ? 'bg-success' : (g.lab_remarks == 'Failed' ? 'bg-danger' : (g.lab_remarks == 'INC' ? 'bg-warning text-dark' : 'bg-secondary')))}" th:text="${g.lab_remarks}"></span></td>
+                                            </th:block>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div th:each="g : ${grades}" th:if="${!readonly}">
+        <div class="modal fade" th:id="'req'+${g.grade_id}" tabindex="-1">
+            <div class="modal-dialog">
+                <form action="/faculty/request-change" method="post" class="modal-content">
+                    <div class="modal-header bg-danger text-white">
+                        <h5 class="modal-title">Request Grade Correction</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="alert alert-info small"><i class="fas fa-info-circle"></i> Once approved, this row will <strong>UNLOCK</strong> so you can correct the scores.</div>
+                        <p>Student: <strong th:text="${g.student_name}"></strong></p>
+                        <input type="hidden" name="scheduleId" th:value="${classInfo.schedule_id}">
+                        <input type="hidden" name="gradeId" th:value="${g.grade_id}">
+                        <div class="mb-3"><label class="fw-bold small">Intended Correction</label><input type="text" name="newGrade" class="form-control" required placeholder="e.g. Correct Prelim score"></div>
+                        <div class="mb-3"><label class="fw-bold small">Reason</label><textarea name="reason" class="form-control" required></textarea></div>
+                    </div>
+                    <div class="modal-footer"><button class="btn btn-danger">Submit Request</button></div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // SMART AUTO-SAVE LOGIC (Handles both LEC and LAB tables seamlessly)
+        document.querySelectorAll('.auto-save-input').forEach(input => {
+            input.addEventListener('change', function() {
+                const row = this.closest('tr');
+                const gradeId = row.dataset.gradeid;
+                const gradeType = row.dataset.gradetype; // Detects if row is LEC or LAB
+                const p = row.querySelector('.prelim').value || 0;
+                const m = row.querySelector('.midterm').value || 0;
+                const f = row.querySelector('.final').value || 0;
+
+                row.style.opacity = '0.6';
+
+                const formData = new URLSearchParams();
+                formData.append('gradeId', gradeId);
+                formData.append('gradeType', gradeType);
+                formData.append('prelim', p);
+                formData.append('midterm', m);
+                formData.append('finals', f);
+
+                fetch('/api/faculty/auto-save', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: formData.toString()
+                })
+                .then(response => response.json())
+                .then(data => {
+                    row.querySelector('.display-grade').innerText = data.semestral_grade;
+                    let badge = row.querySelector('.display-remarks');
+                    badge.innerText = data.remarks;
+                    badge.className = 'badge display-remarks'; 
+                    if (data.remarks === 'Passed') badge.classList.add('bg-success');
+                    else if (data.remarks === 'Failed') badge.classList.add('bg-danger');
+                    else if (data.remarks === 'INC') badge.classList.add('bg-warning', 'text-dark');
+                    else badge.classList.add('bg-secondary');
+
+                    row.style.opacity = '1';
+                    new bootstrap.Toast(document.getElementById('saveToast')).show();
+                })
+                .catch(error => {
+                    alert("Error saving grade. Please check your connection.");
+                    row.style.opacity = '1';
+                });
+            });
+        });
+    </script>
+</body>
+</html>
