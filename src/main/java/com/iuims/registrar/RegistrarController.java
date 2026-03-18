@@ -31,7 +31,7 @@ public class RegistrarController {
             return "redirect:/grades";
         }
         if ("Student".equals(role)) {
-            return "redirect:/enrollment"; // Default student page
+            return "redirect:/enrollment";
         }
         
         m.addAttribute("pendingApps", service.getPendingApplications().size());
@@ -63,66 +63,53 @@ public class RegistrarController {
     }
 
     // ==========================================
-    // STUDENT PORTAL (FIXED WHITELABEL ERRORS)
+    // STUDENT PORTAL 
     // ==========================================
     
-    // Route 1: My Schedule (Read Only)
     @GetMapping("/enrollment")
     public String studentEnrollment(HttpSession s, Model m) {
         Map<String, Object> u = (Map<String, Object>) s.getAttribute("currentUser");
-        if (u == null || !"Student".equals(u.get("role"))) {
-            return "redirect:/login";
-        }
+        if (u == null || !"Student".equals(u.get("role"))) return "redirect:/login";
         
         int sid = (int) u.get("user_id");
         m.addAttribute("classes", service.getAnalyzedOfferings(sid));
-        return "enrollment"; // Points to enrollment.html
+        return "enrollment"; 
     }
 
-    // Route 2: My Grades
     @GetMapping("/my-grades")
     public String studentMyGrades(HttpSession s, Model m) {
         Map<String, Object> u = (Map<String, Object>) s.getAttribute("currentUser");
-        if (u == null || !"Student".equals(u.get("role"))) {
-            return "redirect:/login";
-        }
+        if (u == null || !"Student".equals(u.get("role"))) return "redirect:/login";
         
         int sid = (int) u.get("user_id");
         m.addAttribute("academicHistory", service.getStudentAcademicHistory(sid));
-        return "student_grades"; // Points to student_grades.html
+        return "student_grades"; 
     }
 
-    // Route 3: Finance & Payment
     @GetMapping("/student/finance")
     public String studentFinance(HttpSession s, Model m) {
         Map<String, Object> u = (Map<String, Object>) s.getAttribute("currentUser");
-        if (u == null || !"Student".equals(u.get("role"))) {
-            return "redirect:/login";
-        }
+        if (u == null || !"Student".equals(u.get("role"))) return "redirect:/login";
         
         int sid = (int) u.get("user_id");
         m.addAttribute("finance", service.calculateAssessment(sid));
-        m.addAttribute("payments", service.getStudentPayments(sid));
-        return "student_finance"; // Points to student_finance.html
+        m.addAttribute("ledger", service.getStudentLedger(sid)); // NEW: Fetching True Ledger
+        return "student_finance"; 
     }
 
-    // Route 4: My COR 
     @GetMapping("/my-load")
     public String studentMyLoad(HttpSession s, Model m) {
         Map<String, Object> u = (Map<String, Object>) s.getAttribute("currentUser");
-        if (u == null || !"Student".equals(u.get("role"))) {
-            return "redirect:/login";
-        }
+        if (u == null || !"Student".equals(u.get("role"))) return "redirect:/login";
         
         int sid = (int) u.get("user_id");
         m.addAttribute("student", u);
         m.addAttribute("studentLoad", service.getStudentLoad(sid));
         m.addAttribute("totalUnits", service.getTotalUnits(sid));
         m.addAttribute("finance", service.calculateAssessment(sid));
-        return "student_cor"; // Points to student_cor.html
+        return "student_cor"; 
     }
 
-    // Payment Submission Processing
     @PostMapping("/student/submit-payment")
     public String submitPayment(
             @RequestParam double amount, 
@@ -132,7 +119,6 @@ public class RegistrarController {
             RedirectAttributes redir) {
         
         Map<String, Object> u = (Map<String, Object>) s.getAttribute("currentUser");
-        
         if (u != null && "Student".equals(u.get("role"))) {
             try {
                 String base64Image = "data:" + file.getContentType() + ";base64," + Base64.getEncoder().encodeToString(file.getBytes());
@@ -150,16 +136,13 @@ public class RegistrarController {
     // ==========================================
     @GetMapping("/admin/payments")
     public String adminPayments(HttpSession s, Model m) {
-        if (s.getAttribute("currentUser") == null) {
-            return "redirect:/login";
-        }
+        if (s.getAttribute("currentUser") == null) return "redirect:/login";
         m.addAttribute("pendingPayments", service.getPendingPayments());
         return "admin_payments";
     }
 
     @PostMapping("/admin/verify-payment")
     public String verifyPayment(@RequestParam int paymentId) {
-        // This triggers the Auto-Enrollment inside the service!
         service.verifyPayment(paymentId);
         return "redirect:/admin/payments";
     }
@@ -172,13 +155,8 @@ public class RegistrarController {
 
     @GetMapping("/admin/enrollment")
     public String adminEnrollmentHub(@RequestParam(required=false) String username, @RequestParam(required=false) String errorMsg, Model model, HttpSession session) {
-        if (session.getAttribute("currentUser") == null) {
-            return "redirect:/login";
-        }
-        
-        if (errorMsg != null) {
-            model.addAttribute("errorMsg", errorMsg);
-        }
+        if (session.getAttribute("currentUser") == null) return "redirect:/login";
+        if (errorMsg != null) model.addAttribute("errorMsg", errorMsg);
         
         if (username != null && !username.trim().isEmpty()) {
             Map<String, Object> s = service.findStudentByIdOrName(username);
@@ -201,10 +179,7 @@ public class RegistrarController {
         String result = service.addSubjectDirectly(studentId, scheduleId);
         String username = service.getUsernameFromId(studentId);
         
-        if (result.startsWith("CONFLICT:")) {
-            redir.addAttribute("errorMsg", result);
-        }
-        
+        if (result.startsWith("CONFLICT:")) redir.addAttribute("errorMsg", result);
         redir.addAttribute("username", username);
         return "redirect:/admin/enrollment";
     }
@@ -221,9 +196,7 @@ public class RegistrarController {
     // ==========================================
     @GetMapping("/admin/admission-acceptance")
     public String admissionAcceptance(HttpSession session, Model model) {
-        if (session.getAttribute("currentUser") == null) {
-            return "redirect:/login";
-        }
+        if (session.getAttribute("currentUser") == null) return "redirect:/login";
         model.addAttribute("applicants", service.getPendingApplications());
         return "admin_admission_acceptance";
     }
@@ -236,13 +209,8 @@ public class RegistrarController {
 
     @GetMapping("/admin/student-manager")
     public String manageStudentSearch(@RequestParam(required=false) String username, @RequestParam(required=false) String errorMsg, Model model, HttpSession session) {
-        if (session.getAttribute("currentUser") == null) {
-            return "redirect:/login";
-        }
-        
-        if (errorMsg != null) {
-            model.addAttribute("message", errorMsg);
-        }
+        if (session.getAttribute("currentUser") == null) return "redirect:/login";
+        if (errorMsg != null) model.addAttribute("message", errorMsg);
         
         if (username != null && !username.trim().isEmpty()) {
             Map<String, Object> s = service.findStudentByIdOrName(username);
@@ -301,9 +269,7 @@ public class RegistrarController {
     // ==========================================
     @GetMapping("/admin/print-cor")
     public String printCor(@RequestParam String username, Model model, HttpSession session) {
-        if (session.getAttribute("currentUser") == null) {
-            return "redirect:/login";
-        }
+        if (session.getAttribute("currentUser") == null) return "redirect:/login";
         
         Map<String, Object> student = service.findStudentByIdOrName(username);
         if (student != null) {
@@ -319,9 +285,7 @@ public class RegistrarController {
 
     @GetMapping("/admin/print-cog")
     public String printCog(@RequestParam String username, Model model, HttpSession session) {
-        if (session.getAttribute("currentUser") == null) {
-            return "redirect:/login";
-        }
+        if (session.getAttribute("currentUser") == null) return "redirect:/login";
         
         Map<String, Object> student = service.findStudentByIdOrName(username);
         if (student != null) {
@@ -334,9 +298,7 @@ public class RegistrarController {
 
     @GetMapping("/admin/print-tor")
     public String printTor(@RequestParam String username, Model model, HttpSession session) {
-        if (session.getAttribute("currentUser") == null) {
-            return "redirect:/login";
-        }
+        if (session.getAttribute("currentUser") == null) return "redirect:/login";
         
         Map<String, Object> student = service.findStudentByIdOrName(username);
         if (student != null) {
@@ -353,9 +315,7 @@ public class RegistrarController {
     @GetMapping("/grades")
     public String facultyMenu(HttpSession s, Model m) {
         Map<String,Object> u = (Map<String,Object>) s.getAttribute("currentUser");
-        if(u == null) {
-            return "redirect:/login";
-        }
+        if(u == null) return "redirect:/login";
         m.addAttribute("classes", service.getFacultyClasses((int)u.get("user_id")));
         return "grades_menu";
     }
@@ -363,9 +323,7 @@ public class RegistrarController {
     @GetMapping("/grades/view/{id}")
     public String viewGradeSheet(@PathVariable int id, HttpSession s, Model m) {
         Map<String,Object> u = (Map<String,Object>) s.getAttribute("currentUser");
-        if(u == null) {
-            return "redirect:/login";
-        }
+        if(u == null) return "redirect:/login";
         
         m.addAttribute("classInfo", service.getClassInfo(id));
         m.addAttribute("grades", service.getClassGrades(id));
@@ -411,9 +369,7 @@ public class RegistrarController {
     // ==========================================
     @GetMapping("/admin/settings")
     public String adminSettings(HttpSession s, Model m) {
-        if(s.getAttribute("currentUser") == null) {
-            return "redirect:/login";
-        }
+        if(s.getAttribute("currentUser") == null) return "redirect:/login";
         m.addAttribute("settings", service.getGradingWindows());
         return "admin_settings";
     }
@@ -432,9 +388,7 @@ public class RegistrarController {
 
     @GetMapping("/admin/approvals")
     public String adminApprovals(HttpSession s, Model m) {
-        if(s.getAttribute("currentUser") == null) {
-            return "redirect:/login";
-        }
+        if(s.getAttribute("currentUser") == null) return "redirect:/login";
         m.addAttribute("pendingClasses", service.getPendingClassSubmissions());
         m.addAttribute("requests", service.getPendingApprovals());
         return "admin_approvals";
@@ -454,9 +408,7 @@ public class RegistrarController {
 
     @GetMapping("/admin/users")
     public String adminUsers(Model m, HttpSession s) {
-        if(s.getAttribute("currentUser") == null) {
-            return "redirect:/login";
-        }
+        if(s.getAttribute("currentUser") == null) return "redirect:/login";
         m.addAttribute("users", service.getAllUsers());
         return "admin_users";
     }
@@ -481,18 +433,14 @@ public class RegistrarController {
 
     @GetMapping("/admin/classes")
     public String adminClasses(HttpSession s, Model m) {
-        if(s.getAttribute("currentUser") == null) {
-            return "redirect:/login";
-        }
+        if(s.getAttribute("currentUser") == null) return "redirect:/login";
         m.addAttribute("classes", service.getAllClassesAdmin());
         return "admin_classes";
     }
 
     @GetMapping("/admin/classes/view/{id}")
     public String adminViewClass(@PathVariable int id, HttpSession s, Model m) {
-        if(s.getAttribute("currentUser") == null) {
-            return "redirect:/login";
-        }
+        if(s.getAttribute("currentUser") == null) return "redirect:/login";
         m.addAttribute("classInfo", service.getClassInfo(id));
         m.addAttribute("grades", service.getClassGrades(id));
         m.addAttribute("windows", service.getGradingWindows());

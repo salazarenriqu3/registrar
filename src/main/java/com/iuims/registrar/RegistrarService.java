@@ -32,6 +32,11 @@ public class RegistrarService {
             
             db.execute("CREATE TABLE IF NOT EXISTS payments (payment_id INT AUTO_INCREMENT PRIMARY KEY, student_id INT, amount DECIMAL(10,2), reference_number VARCHAR(50), receipt_image LONGTEXT, status VARCHAR(20) DEFAULT 'PENDING', payment_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP)");
 
+            // ==========================================
+            // NEW: THE TRUE STUDENT LEDGER TABLE
+            // ==========================================
+            db.execute("CREATE TABLE IF NOT EXISTS student_ledger (ledger_id INT AUTO_INCREMENT PRIMARY KEY, student_id INT, transaction_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP, transaction_type VARCHAR(20), description VARCHAR(255), debit DECIMAL(10,2) DEFAULT 0.00, credit DECIMAL(10,2) DEFAULT 0.00)");
+
             try { db.execute("ALTER TABLE class_schedules ADD COLUMN is_unlocked TINYINT DEFAULT 0"); } catch (Exception ignored) {}
             try { db.execute("ALTER TABLE curriculum_catalog ADD COLUMN has_lab TINYINT DEFAULT 0"); } catch (Exception ignored) {}
             try { db.execute("ALTER TABLE student_grades ADD COLUMN lab_prelim DECIMAL(5,2) DEFAULT 0.00, ADD COLUMN lab_midterm DECIMAL(5,2) DEFAULT 0.00, ADD COLUMN lab_final DECIMAL(5,2) DEFAULT 0.00, ADD COLUMN lab_semestral_grade DECIMAL(5,2) DEFAULT 0.00, ADD COLUMN lab_remarks VARCHAR(20) DEFAULT 'Ongoing'"); } catch (Exception ignored) {}
@@ -52,7 +57,30 @@ public class RegistrarService {
     }
 
     // ==========================================
-    // AUTO-ENROLLMENT & PAYMENTS (NEW LOGIC)
+    // TRUE LEDGER LOGIC & TRANSACTIONS
+    // ==========================================
+    private void chargeMiscFeeIfNotCharged(int sid) {
+        int count = db.queryForObject("SELECT COUNT(*) FROM student_ledger WHERE student_id = ? AND description = 'Miscellaneous Fees'", Integer.class, sid);
+        if (count == 0) {
+            db.update("INSERT INTO student_ledger (student_id, transaction_type, description, debit) VALUES (?, 'ASSESSMENT', 'Miscellaneous Fees', 5500.00)", sid);
+        }
+    }
+
+    public List<Map<String, Object>> getStudentLedger(int sid) {
+        List<Map<String, Object>> records = db.queryForList("SELECT * FROM student_ledger WHERE student_id = ? ORDER BY transaction_date ASC, ledger_id ASC", sid);
+        double runningBalance = 0.0;
+        
+        for (Map<String, Object> r : records) {
+            double debit = ((Number) (r.get("debit") != null ? r.get("debit") : 0)).doubleValue();
+            double credit = ((Number) (r.get("credit") != null ? r.get("credit") : 0)).doubleValue();
+            runningBalance += (debit - credit);
+            r.put("running_balance", runningBalance);
+        }
+        return records;
+    }
+
+    // ==========================================
+    // AUTO-ENROLLMENT & PAYMENTS 
     // ==========================================
     public void submitPayment(int studentId, double amount, String referenceNumber, String base64Image) {
         db.update("INSERT INTO payments (student_id, amount, reference_number, receipt_image) VALUES (?, ?, ?, ?)", 
@@ -70,42 +98,50 @@ public class RegistrarService {
 
     @Transactional
     public void verifyPayment(int paymentId) {
-        // 1. Verify the payment
+        Map<String, Object> payInfo = db.queryForMap("SELECT student_id, amount, reference_number FROM payments WHERE payment_id = ?", paymentId);
         db.update("UPDATE payments SET status = 'VERIFIED' WHERE payment_id = ?", paymentId);
         
-        // 2. Fetch the student ID tied to this payment
-        Integer studentId = db.queryForObject("SELECT student_id FROM payments WHERE payment_id = ?", Integer.class, paymentId);
-        
+        Integer studentId = (Integer) payInfo.get("student_id");
         if (studentId != null) {
-            // 3. Trigger Auto-Enrollment
-            autoEnrollStudent(studentId);
+            // TRUE LEDGER: Insert a permanent Credit record for this payment
+            db.update("INSERT INTO student_ledger (student_id, transaction_type, description, credit) VALUES (?, 'PAYMENT', ?, ?)", 
+                      studentId, "Payment (Ref: " + payInfo.get("reference_number") + ")", payInfo.get("amount"));
+            
+            // THE FIX: Only trigger Auto-Enrollment if the student has 0 subjects (Brand new enrollment)
+            int enrolledCount = db.queryForObject("SELECT COUNT(*) FROM enrollment_details WHERE student_id = ?", Integer.class, studentId);
+            if (enrolledCount == 0) {
+                autoEnrollStudent(studentId);
+            }
         }
     }
 
     @Transactional
     public void autoEnrollStudent(int studentId) {
-        // Fetch student's year level and name
         Map<String, Object> student = db.queryForMap("SELECT year_level, real_name FROM sys_users WHERE user_id = ?", studentId);
         int yearLevel = (int) student.get("year_level");
         String realName = (String) student.get("real_name");
 
-        // Find all OPEN schedules that match the student's year level
-        String sql = "SELECT s.schedule_id FROM class_schedules s JOIN curriculum_catalog c ON s.course_code = c.course_code WHERE c.year_level = ? AND s.status = 'OPEN'";
-        List<Integer> matchingSchedules = db.queryForList(sql, Integer.class, yearLevel);
+        // Ensure the student is billed for Misc fees at least once
+        chargeMiscFeeIfNotCharged(studentId);
 
-        for (Integer schedId : matchingSchedules) {
+        String sql = "SELECT s.schedule_id, c.course_code, c.units FROM class_schedules s JOIN curriculum_catalog c ON s.course_code = c.course_code WHERE c.year_level = ? AND s.status = 'OPEN'";
+        List<Map<String, Object>> matchingSchedules = db.queryForList(sql, yearLevel);
+
+        for (Map<String, Object> sched : matchingSchedules) {
             try {
-                // Ensure they aren't already enrolled to prevent errors
+                int schedId = (int) sched.get("schedule_id");
                 int count = db.queryForObject("SELECT COUNT(*) FROM enrollment_details WHERE student_id = ? AND schedule_id = ?", Integer.class, studentId, schedId);
+                
                 if (count == 0) {
-                    // Enroll the student
                     db.update("INSERT INTO enrollment_details (student_id, schedule_id) VALUES (?, ?)", studentId, schedId);
-                    // Create their Grade Row for the Professor instantly
                     db.update("INSERT INTO student_grades (student_id, schedule_id, student_name, status) VALUES (?, ?, ?, 'DRAFT')", studentId, schedId, realName);
+                    
+                    // TRUE LEDGER: Insert a permanent Debit record for this specific subject
+                    double cost = ((Number) sched.get("units")).doubleValue() * 1500.0;
+                    db.update("INSERT INTO student_ledger (student_id, transaction_type, description, debit) VALUES (?, 'ASSESSMENT', ?, ?)", 
+                              studentId, "Added Subject: " + sched.get("course_code"), cost);
                 }
-            } catch (Exception e) {
-                // Ignore duplicates smoothly
-            }
+            } catch (Exception e) {}
         }
     }
 
@@ -195,7 +231,7 @@ public class RegistrarService {
     }
 
     // ==========================================
-    // CORE ENROLLMENT & BILLING
+    // CORE ENROLLMENT & BILLING (LEDGER DRIVEN)
     // ==========================================
     public Map<String, Object> login(String u, String p) {
         try {
@@ -226,29 +262,29 @@ public class RegistrarService {
 
     public Map<String, Object> calculateAssessment(int sid) {
         Map<String, Object> m = new HashMap<>();
-        double tuition = getTotalUnits(sid) * 1500.0;
-        double misc = 5500.0;
-        double total = tuition + misc;
         
-        double totalPaid = 0.0;
-        try {
-            Double result = db.queryForObject("SELECT SUM(amount) FROM payments WHERE student_id = ? AND status = 'VERIFIED'", Double.class, sid);
-            if (result != null) {
-                totalPaid = result;
-            }
-        } catch (Exception e) {}
+        // Ledger-Driven Calculation
+        Double totalAssessed = db.queryForObject("SELECT SUM(debit) FROM student_ledger WHERE student_id = ?", Double.class, sid);
+        if (totalAssessed == null) totalAssessed = 0.0;
         
-        double balance = total - totalPaid;
+        Double totalPaid = db.queryForObject("SELECT SUM(credit) FROM student_ledger WHERE student_id = ?", Double.class, sid);
+        if (totalPaid == null) totalPaid = 0.0;
+
+        Double misc = db.queryForObject("SELECT SUM(debit) FROM student_ledger WHERE student_id = ? AND description = 'Miscellaneous Fees'", Double.class, sid);
+        if (misc == null) misc = 0.0;
+
+        double tuition = totalAssessed - misc;
+        double balance = totalAssessed - totalPaid;
 
         m.put("tuition_fee", tuition);
         m.put("misc_fee", misc);
-        m.put("total_assessment", total);
+        m.put("total_assessment", totalAssessed);
         m.put("total_paid", totalPaid);
         m.put("balance", balance);
         
         m.put("tuition_fee_fmt", String.format("%,.2f", tuition));
         m.put("misc_fee_fmt", String.format("%,.2f", misc));
-        m.put("total_assessment_fmt", String.format("%,.2f", total));
+        m.put("total_assessment_fmt", String.format("%,.2f", totalAssessed));
         m.put("total_paid_fmt", String.format("%,.2f", totalPaid));
         m.put("balance_fmt", String.format("%,.2f", Math.max(0, balance)));
         
@@ -302,39 +338,34 @@ public class RegistrarService {
     @Transactional
     public String addSubjectDirectly(int sid, int schedId) {
         try {
-            // 1. Check Duplicate Enrollment
             int count = db.queryForObject("SELECT COUNT(*) FROM enrollment_details WHERE student_id = ? AND schedule_id = ?", Integer.class, sid, schedId);
-            if (count > 0) {
-                return "CONFLICT: Student is already enrolled in this subject.";
-            }
+            if (count > 0) return "CONFLICT: Student is already enrolled in this subject.";
 
-            // 2. Check Schedule Overlap
             String conflict = checkScheduleConflict(sid, schedId);
-            if (conflict != null) {
-                return "CONFLICT: " + conflict;
-            }
+            if (conflict != null) return "CONFLICT: " + conflict;
 
-            // 3. Check Class Capacity (FULL CLASS)
-            Map<String, Object> classInfo = db.queryForMap("SELECT max_slots, course_code FROM class_schedules WHERE schedule_id = ?", schedId);
+            Map<String, Object> classInfo = db.queryForMap("SELECT s.max_slots, c.course_code, c.units FROM class_schedules s JOIN curriculum_catalog c ON s.course_code = c.course_code WHERE s.schedule_id = ?", schedId);
             int maxSlots = (int) classInfo.get("max_slots");
             int enrolledCount = db.queryForObject("SELECT COUNT(*) FROM enrollment_details WHERE schedule_id = ?", Integer.class, schedId);
             if (enrolledCount >= maxSlots) {
                 return "CONFLICT: Class " + classInfo.get("course_code") + " is already FULL (" + enrolledCount + "/" + maxSlots + " slots taken).";
             }
 
-            // 4. Check Maximum Load Limit (Max 24 Units)
             int currentUnits = getTotalUnits(sid);
-            int newClassUnits = db.queryForObject("SELECT c.units FROM class_schedules s JOIN curriculum_catalog c ON s.course_code = c.course_code WHERE s.schedule_id = ?", Integer.class, schedId);
+            int newClassUnits = (int) classInfo.get("units");
             if ((currentUnits + newClassUnits) > 24) {
-                return "CONFLICT: Adding this subject exceeds the maximum allowed unit load of 24 units. (Current: " + currentUnits + ", Adding: " + newClassUnits + ")";
+                return "CONFLICT: Adding this subject exceeds maximum load of 24 units.";
             }
 
-            // 5. Enroll Student
             db.update("INSERT INTO enrollment_details (student_id, schedule_id) VALUES (?, ?)", sid, schedId);
             
-            // 6. Generate blank grade template automatically
             String realName = db.queryForObject("SELECT real_name FROM sys_users WHERE user_id = ?", String.class, sid);
             db.update("INSERT INTO student_grades (student_id, schedule_id, student_name, status) VALUES (?, ?, ?, 'DRAFT')", sid, schedId, realName);
+
+            // TRUE LEDGER: Bill the student for this newly added class
+            chargeMiscFeeIfNotCharged(sid);
+            double cost = newClassUnits * 1500.0;
+            db.update("INSERT INTO student_ledger (student_id, transaction_type, description, debit) VALUES (?, 'ASSESSMENT', ?, ?)", sid, "Added Subject: " + classInfo.get("course_code"), cost);
 
             return "Success";
         } catch (Exception e) { 
@@ -344,7 +375,14 @@ public class RegistrarService {
     
     @Transactional 
     public String dropSubjectDirectly(int sid, int schedId) {
+        Map<String, Object> classInfo = db.queryForMap("SELECT c.course_code, c.units FROM class_schedules s JOIN curriculum_catalog c ON s.course_code = c.course_code WHERE s.schedule_id = ?", schedId);
+        
         db.update("DELETE FROM enrollment_details WHERE student_id=? AND schedule_id=?", sid, schedId);
+        
+        // TRUE LEDGER: Issue a refund (Credit) for dropping the class
+        double refund = ((Number) classInfo.get("units")).doubleValue() * 1500.0;
+        db.update("INSERT INTO student_ledger (student_id, transaction_type, description, credit) VALUES (?, 'REFUND', ?, ?)", sid, "Refund (Dropped): " + classInfo.get("course_code"), refund);
+
         return "Dropped";
     }
 

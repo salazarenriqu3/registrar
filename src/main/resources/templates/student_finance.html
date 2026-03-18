@@ -29,7 +29,7 @@
                 <div th:if="${errorMsg}" class="alert alert-danger fw-bold"><i class="fas fa-exclamation-circle me-2"></i> <span th:text="${errorMsg}"></span></div>
 
                 <div class="row g-4">
-                    <div class="col-md-5">
+                    <div class="col-md-4">
                         <div class="card card-modern p-4 mb-4 border-start border-5 border-danger">
                             <h5 class="text-muted fw-bold mb-3">OUTSTANDING BALANCE</h5>
                             <h2 class="text-danger fw-bold mb-0">₱ <span th:text="${finance.balance_fmt}"></span></h2>
@@ -64,30 +64,30 @@
                         </div>
                     </div>
 
-                    <div class="col-md-7">
+                    <div class="col-md-8">
                         <div class="card card-modern p-4 h-100">
-                            <h5 class="fw-bold mb-3"><i class="fas fa-history me-2"></i> Payment History</h5>
+                            <h5 class="fw-bold mb-3"><i class="fas fa-book me-2"></i> Statement of Account (Ledger)</h5>
                             <div class="table-responsive">
-                                <table class="table align-middle">
+                                <table class="table align-middle table-sm mt-2">
                                     <thead class="table-light">
                                         <tr>
                                             <th>Date</th>
-                                            <th>Ref #</th>
-                                            <th>Amount</th>
-                                            <th>Status</th>
+                                            <th>Transaction Description</th>
+                                            <th class="text-danger text-end">Debit (Charge)</th>
+                                            <th class="text-success text-end">Credit (Paid)</th>
+                                            <th class="text-primary text-end">Running Balance</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <tr th:each="p : ${payments}">
-                                            <td class="small" th:text="${#dates.format(p.payment_date, 'MMM dd, yyyy')}"></td>
-                                            <td class="fw-bold" th:text="${p.reference_number}"></td>
-                                            <td class="fw-bold" th:text="${'₱ ' + #numbers.formatDecimal(p.amount, 1, 'COMMA', 2, 'POINT')}"></td>
-                                            <td>
-                                                <span th:class="${'badge ' + (p.status == 'PENDING' ? 'bg-warning text-dark' : (p.status == 'VERIFIED' ? 'bg-success' : 'bg-danger'))}" th:text="${p.status}"></span>
-                                            </td>
+                                        <tr th:each="row : ${ledger}">
+                                            <td class="small" th:text="${#dates.format(row.transaction_date, 'MMM dd, yyyy')}"></td>
+                                            <td class="small fw-bold text-muted" th:text="${row.description}"></td>
+                                            <td class="text-danger text-end small" th:text="${row.debit > 0 ? '₱ ' + #numbers.formatDecimal(row.debit, 1, 'COMMA', 2, 'POINT') : '-'}"></td>
+                                            <td class="text-success text-end small" th:text="${row.credit > 0 ? '₱ ' + #numbers.formatDecimal(row.credit, 1, 'COMMA', 2, 'POINT') : '-'}"></td>
+                                            <td class="text-primary text-end fw-bold small bg-light" th:text="${'₱ ' + #numbers.formatDecimal(row.running_balance, 1, 'COMMA', 2, 'POINT')}"></td>
                                         </tr>
-                                        <tr th:if="${#lists.isEmpty(payments)}">
-                                            <td colspan="4" class="text-center text-muted py-4">No payment records found.</td>
+                                        <tr th:if="${#lists.isEmpty(ledger)}">
+                                            <td colspan="5" class="text-center text-muted py-4">No financial records found.</td>
                                         </tr>
                                     </tbody>
                                 </table>
