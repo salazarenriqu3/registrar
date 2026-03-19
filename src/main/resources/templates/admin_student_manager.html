@@ -221,7 +221,15 @@
                                             <input type="hidden" name="scheduleId" th:value="${c.schedule_id}">
                                             <button class="btn btn-sm btn-success fw-bold">ADD</button>
                                         </form>
-                                        <span th:if="${c.is_disabled}" class="badge bg-secondary">Enrolled</span>
+                                        
+                                        <span th:if="${c.is_disabled}" class="badge fw-bold shadow-sm" 
+                                              th:classappend="${
+                                                  c.reason_msg == 'Currently Enrolled' ? 'bg-primary' : 
+                                                  (c.reason_msg == 'Already Passed' ? 'bg-success' : 
+                                                  (c.reason_msg == 'Class Full' ? 'bg-warning text-dark' : 
+                                                  'bg-danger'))}" 
+                                              th:text="${c.reason_msg}">
+                                        </span>
                                     </td>
                                 </tr>
                             </tbody>
