@@ -72,7 +72,8 @@ public class RegistrarController {
         if (u == null || !"Student".equals(u.get("role"))) return "redirect:/login";
         
         int sid = (int) u.get("user_id");
-        m.addAttribute("classes", service.getAnalyzedOfferings(sid));
+        // THE FIX: Supply the actual enrolled student load, NOT the catalog constraints list
+        m.addAttribute("studentLoad", service.getStudentLoad(sid));
         return "enrollment"; 
     }
 
@@ -93,7 +94,7 @@ public class RegistrarController {
         
         int sid = (int) u.get("user_id");
         m.addAttribute("finance", service.calculateAssessment(sid));
-        m.addAttribute("ledger", service.getStudentLedger(sid)); // NEW: Fetching True Ledger
+        m.addAttribute("ledger", service.getStudentLedger(sid)); 
         return "student_finance"; 
     }
 
@@ -199,12 +200,9 @@ public class RegistrarController {
         if (session.getAttribute("currentUser") == null) return "redirect:/login";
         
         if (searchQuery != null && !searchQuery.trim().isEmpty()) {
-            // Updated service call to find a single applicant by name or ID
             Map<String, Object> applicant = service.findPendingApplicant(searchQuery);
             if (applicant != null) {
                 model.addAttribute("applicant", applicant);
-                
-                // Logic to preview the student ID assignment
                 String yearPrefix = String.valueOf(java.time.Year.now().getValue());
                 int count = service.getTotalStudentCount(); 
                 String nextIdPreview = String.format("%s-%04d", yearPrefix, (count + 1));

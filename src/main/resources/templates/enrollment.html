@@ -21,7 +21,6 @@
         
         <div id="content">
             <nav class="top-navbar">
-                <button id="sidebarCollapse" class="btn-toggle"><i class="fas fa-bars"></i></button>
                 <span class="fw-bold fs-5">My Enrolled Classes</span>
             </nav>
             <div class="container-fluid p-4">
@@ -38,39 +37,38 @@
                                 <tr>
                                     <th>Subject</th>
                                     <th>Schedule</th>
-                                    <th>Faculty</th>
+                                    <th>Units</th>
                                     <th class="text-center">Status</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr th:each="c : ${classes}" th:if="${c.is_disabled}">
+                                <tr th:each="load : ${studentLoad}">
                                     <td>
                                         <div class="d-flex align-items-center">
                                             <div class="bg-success text-white rounded p-2 me-3 fw-bold" style="width:50px; text-align:center;">
-                                                <span th:text="${c.section}"></span>
+                                                <i class="fas fa-book"></i>
                                             </div>
                                             <div>
-                                                <h6 class="mb-0 fw-bold" th:text="${c.course_code}"></h6>
-                                                <small class="text-muted" th:text="${c.description}"></small>
+                                                <h6 class="mb-0 fw-bold" th:text="${load.course_code}"></h6>
+                                                <small class="text-muted" th:text="${load.description}"></small>
                                             </div>
                                         </div>
                                     </td>
                                     <td>
                                         <i class="far fa-clock text-success me-1"></i> 
-                                        <span th:text="${c.pretty_schedule}"></span>
+                                        <span th:text="${load.pretty_schedule}"></span>
                                     </td>
                                     <td>
-                                        <span th:if="${c.faculty_name}" th:text="${c.faculty_name}"></span>
-                                        <span th:unless="${c.faculty_name}" class="badge bg-secondary">TBA</span>
+                                        <span th:text="${load.units}"></span> Units
                                     </td>
                                     <td class="text-center">
                                         <span class="badge bg-success">Enrolled</span>
                                     </td>
                                 </tr>
-                                <tr>
+                                <tr th:if="${#lists.isEmpty(studentLoad)}">
                                     <td colspan="4" class="text-center py-5 text-muted">
                                         <i class="fas fa-calendar-times fa-3x mb-3 opacity-25"></i><br>
-                                        No subjects enrolled yet. Awaiting payment verification.
+                                        No subjects enrolled yet. Awaiting registration or payment verification.
                                     </td>
                                 </tr>
                             </tbody>
